@@ -12,11 +12,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        sync: false
+        value: 10000
       - key: MONDAY_API_TOKEN
-        sync: false
+        value: eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjU0MDcxMzg4NCwiYWFpIjoxMSwidWlkIjo3NjMyOTgzOSwiaWFkIjoiMjAyNS0wNy0xOFQxNTowMzo1OS40NjRaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTE0OTc2MDksInJnbiI6InVzZTEifQ.Dyum-Id4xq8fuGeNPpVP05OhWdImu94DLBOvS8CWMWk
       - key: MONDAY_BOARD_ID
-        sync: false
+        value: "9572919643"
       - key: BASE_USER_PATH
         value: /tmp
       - key: MODEL_FILE_PATH

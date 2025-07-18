@@ -1,4 +1,9 @@
-require('dotenv').config();
+// Carrega variáveis de ambiente baseado no ambiente
+if (process.env.NODE_ENV === 'production') {
+  require('dotenv').config({ path: '.env.production' });
+} else {
+  require('dotenv').config();
+}
 const path = require('path');
 const os = require('os');
 

@@ -334,9 +334,35 @@ class MondayAutomationAPI {
   }
 }
 
+/**
+ * Valida se todas as variáveis de ambiente necessárias estão configuradas
+ */
+function validarVariaveisAmbiente() {
+  const variaveisObrigatorias = [
+    'MONDAY_API_TOKEN',
+    'MONDAY_BOARD_ID'
+  ];
+  
+  const variaveisFaltando = variaveisObrigatorias.filter(variavel => !process.env[variavel]);
+  
+  if (variaveisFaltando.length > 0) {
+    console.error('❌ Erro ao inicializar a aplicação: Variáveis de ambiente obrigatórias não configuradas:');
+    variaveisFaltando.forEach(variavel => {
+      console.error(`   - ${variavel}`);
+    });
+    console.error('\n💡 Verifique se as variáveis estão configuradas no arquivo .env ou no ambiente de produção.');
+    throw new Error(`Variáveis de ambiente não configuradas: ${variaveisFaltando.join(', ')}`);
+  }
+  
+  console.log('✅ Todas as variáveis de ambiente obrigatórias estão configuradas');
+}
+
 // Inicialização da aplicação
 if (require.main === module) {
   try {
+    // Valida variáveis de ambiente antes de inicializar
+    validarVariaveisAmbiente();
+    
     const api = new MondayAutomationAPI();
     api.iniciar();
   } catch (error) {
