@@ -11,8 +11,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Logs
-logs/
+# Log files (keep logs directory but ignore log files)
 *.log
 combined.log
 error.log
