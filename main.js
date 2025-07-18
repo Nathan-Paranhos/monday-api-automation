@@ -87,6 +87,9 @@ class MondayAutomationAPI {
     // Rota para consultar produto por ID
     this.app.get('/produto/:id', this.consultarProduto.bind(this));
     
+    // Rota para buscar farmácias com produto BOT
+    this.app.get('/api/farmacias/bot', this.buscarFarmaciasBOT.bind(this));
+    
     // Rota para listar configurações (sem dados sensíveis)
     this.app.get('/config', this.obterConfiguracoes.bind(this));
   }
@@ -236,6 +239,33 @@ class MondayAutomationAPI {
         status: 'erro',
         erro: error.message,
         codigo: 'PRODUTO_NAO_ENCONTRADO',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Busca farmácias com produto BOT
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  async buscarFarmaciasBOT(req, res) {
+    try {
+      const farmaciasBOT = await this.mondayClient.buscarFarmaciasBOT();
+      
+      res.json({
+        status: 'ok',
+        total: farmaciasBOT.length,
+        farmacias: farmaciasBOT,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logErro('Busca farmácias BOT', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: 'Erro interno do servidor',
+        codigo: 'ERRO_INTERNO',
+        detalhes: error.message,
         timestamp: new Date().toISOString()
       });
     }

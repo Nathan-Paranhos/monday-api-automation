@@ -177,6 +177,75 @@ class MondayClient {
   }
 
   /**
+   * Busca todas as farmácias com produto "BOT"
+   * @returns {Promise<Array>} Lista de farmácias com produto BOT
+   */
+  async buscarFarmaciasBOT() {
+    try {
+      const query = `
+        query GetAllItems($boardId: ID!) {
+          boards(ids: [$boardId]) {
+            items_page {
+              items {
+                id
+                name
+                column_values {
+                  id
+                  text
+                  value
+                  column {
+                    title
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        boardId: config.monday.boardId.toString()
+      };
+
+      const response = await this.client.request(query, variables);
+      
+      if (!response.boards || response.boards.length === 0) {
+        throw new Error(`Board ${config.monday.boardId} não encontrado`);
+      }
+
+      const items = response.boards[0].items_page.items;
+      const farmaciasBOT = [];
+
+      items.forEach(item => {
+        // Procura pela coluna "Produto"
+        const produtoColumn = item.column_values.find(col => 
+          col.column && col.column.title && (
+            col.column.title.toLowerCase().includes('produto') ||
+            col.id === 'dropdown' ||
+            col.id === 'status'
+          )
+        );
+
+        if (produtoColumn && produtoColumn.text && produtoColumn.text.trim() === 'BOT') {
+          farmaciasBOT.push({
+            id: item.id,
+            elemento: item.name, // Nome da farmácia (ex: 2707 - BOULEVARD PHARMA)
+            produto: produtoColumn.text
+          });
+        }
+      });
+
+      logConsultaMonday('Busca BOT', `Encontradas ${farmaciasBOT.length} farmácias com produto BOT`);
+      
+      return farmaciasBOT;
+
+    } catch (error) {
+      logErro('Busca farmácias BOT', error);
+      throw error;
+    }
+  }
+
+  /**
    * Testa a conexão com o Monday.com
    * @returns {Promise<boolean>} True se a conexão estiver funcionando
    */

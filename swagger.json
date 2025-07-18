@@ -261,6 +261,53 @@
         }
       }
     },
+    "/api/farmacias/bot": {
+      "get": {
+        "tags": ["Monday.com"],
+        "summary": "Buscar Farmácias com Produto BOT",
+        "description": "Busca todas as farmácias que possuem o produto 'BOT' no Monday.com",
+        "operationId": "buscarFarmaciasBOT",
+        "responses": {
+          "200": {
+            "description": "Farmácias com produto BOT encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FarmaciasBOTResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "total": 2,
+                  "farmacias": [
+                    {
+                      "id": "123456789",
+                      "elemento": "2707 - BOULEVARD PHARMA",
+                      "produto": "BOT"
+                    },
+                    {
+                      "id": "987654321",
+                      "elemento": "3456 - FARMÁCIA CENTRAL",
+                      "produto": "BOT"
+                    }
+                  ],
+                  "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config": {
       "get": {
         "tags": ["Sistema"],
@@ -463,6 +510,50 @@
             "description": "Timestamp da consulta"
           }
         }
+      },
+      "FarmaciasBOTResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "Status da operação"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Número total de farmácias encontradas com produto BOT"
+          },
+          "farmacias": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "ID único do item no Monday.com"
+                },
+                "elemento": {
+                  "type": "string",
+                  "description": "Nome da farmácia (ex: 2707 - BOULEVARD PHARMA)"
+                },
+                "produto": {
+                  "type": "string",
+                  "enum": ["BOT"],
+                  "description": "Produto encontrado (sempre BOT nesta consulta)"
+                }
+              },
+              "required": ["id", "elemento", "produto"]
+            },
+            "description": "Lista de farmácias com produto BOT"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp da consulta"
+          }
+        },
+        "required": ["status", "total", "farmacias", "timestamp"]
       },
       "ConfigResponse": {
         "type": "object",
