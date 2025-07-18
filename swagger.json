@@ -1,0 +1,528 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Monday API Automation",
+    "description": "API para automatizar a criação de estrutura de pastas baseada em demandas do Monday.com, definindo analistas responsáveis por produto.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Nathan Silva - Fagron Tech",
+      "email": "nathan.silva@fagrontech.com.br"
+    },
+    "license": {
+      "name": "ISC",
+      "url": "https://opensource.org/licenses/ISC"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor de desenvolvimento local"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "Health Check",
+        "description": "Verifica se a API está funcionando corretamente",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "API funcionando normalmente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "timestamp": "2024-01-15T10:30:00.000Z",
+                  "service": "monday-api-automation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automatizar": {
+      "post": {
+        "tags": ["Automação"],
+        "summary": "Automação Principal",
+        "description": "Executa a automação completa: consulta Monday.com, cria estrutura de pastas e copia arquivo modelo",
+        "operationId": "executarAutomacao",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomacaoRequest"
+              },
+              "example": {
+                "id_cliente": 12345,
+                "nome_farmacia": "Farmácia Exemplo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Automação executada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomacaoSuccessResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "produto": "Fórmula Certa",
+                  "pasta": "C:\\Users\\Usuario\\OneDrive\\#FCERTA EXTENSÃO\\12345",
+                  "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#FCERTA EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
+                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br",
+                  "cliente": {
+                    "id": 12345,
+                    "nome_farmacia": "Farmácia Exemplo"
+                  },
+                  "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "erro",
+                  "erro": "Campo \"id_cliente\" deve ser um número positivo",
+                  "codigo": "DADOS_INVALIDOS",
+                  "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Demanda não encontrada no Monday.com",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "erro",
+                  "erro": "Demanda não encontrada para o cliente ID: 12345",
+                  "codigo": "DEMANDA_NAO_ENCONTRADA",
+                  "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para criar pastas/arquivos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro de conexão com Monday.com",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test-monday": {
+      "get": {
+        "tags": ["Monday.com"],
+        "summary": "Teste de Conexão Monday",
+        "description": "Verifica se a conexão com a API do Monday.com está funcionando",
+        "operationId": "testarConexaoMonday",
+        "responses": {
+          "200": {
+            "description": "Teste de conexão realizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MondayTestResponse"
+                },
+                "examples": {
+                  "sucesso": {
+                    "summary": "Conexão bem-sucedida",
+                    "value": {
+                      "status": "ok",
+                      "monday_conectado": true,
+                      "timestamp": "2024-01-15T10:30:00.000Z"
+                    }
+                  },
+                  "falha": {
+                    "summary": "Falha na conexão",
+                    "value": {
+                      "status": "erro",
+                      "monday_conectado": false,
+                      "timestamp": "2024-01-15T10:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao testar conexão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/produto/{id}": {
+      "get": {
+        "tags": ["Monday.com"],
+        "summary": "Consultar Produto por ID",
+        "description": "Busca o produto associado a um cliente específico no Monday.com",
+        "operationId": "consultarProduto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID do cliente",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 12345
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produto encontrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProdutoResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "id_cliente": 12345,
+                  "produto": "Fórmula Certa",
+                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br",
+                  "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID do cliente inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produto não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "Obter Configurações",
+        "description": "Retorna as configurações da aplicação (sem dados sensíveis)",
+        "operationId": "obterConfiguracoes",
+        "responses": {
+          "200": {
+            "description": "Configurações obtidas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigResponse"
+                },
+                "example": {
+                  "produtos_validos": ["Fórmula Certa", "Phusion"],
+                  "responsaveis": {
+                    "Fórmula Certa": "Pedro.Ribeiro@fagrontech.com.br",
+                    "Phusion": "Bruno.Vaz@fagrontech.com.br"
+                  },
+                  "caminhos_produtos": {
+                    "Fórmula Certa": "#FCERTA EXTENSÃO",
+                    "Phusion": "#PHUSION EXTENSÃO"
+                  },
+                  "servidor": {
+                    "porta": 3000,
+                    "ambiente": "development"
+                  },
+                  "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AutomacaoRequest": {
+        "type": "object",
+        "required": ["id_cliente", "nome_farmacia"],
+        "properties": {
+          "id_cliente": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "ID único do cliente",
+            "example": 12345
+          },
+          "nome_farmacia": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Nome da farmácia",
+            "example": "Farmácia Exemplo"
+          }
+        }
+      },
+      "AutomacaoSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "Status da operação"
+          },
+          "produto": {
+            "type": "string",
+            "enum": ["Fórmula Certa", "Phusion"],
+            "description": "Produto encontrado no Monday.com"
+          },
+          "pasta": {
+            "type": "string",
+            "description": "Caminho completo da pasta criada"
+          },
+          "arquivo_modelo": {
+            "type": "string",
+            "description": "Caminho completo do arquivo modelo copiado"
+          },
+          "responsavel": {
+            "type": "string",
+            "format": "email",
+            "description": "Email do responsável pelo produto"
+          },
+          "cliente": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "ID do cliente"
+              },
+              "nome_farmacia": {
+                "type": "string",
+                "description": "Nome da farmácia"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp da operação"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["erro"],
+            "description": "Status da operação"
+          },
+          "erro": {
+            "type": "string",
+            "description": "Mensagem de erro descritiva"
+          },
+          "codigo": {
+            "type": "string",
+            "enum": [
+              "DADOS_INVALIDOS",
+              "DEMANDA_NAO_ENCONTRADA",
+              "ERRO_CONEXAO",
+              "ERRO_PERMISSAO",
+              "ERRO_INTERNO",
+              "ROTA_NAO_ENCONTRADA",
+              "ID_INVALIDO",
+              "PRODUTO_NAO_ENCONTRADO"
+            ],
+            "description": "Código de erro padronizado"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp do erro"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "Status da API"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp da verificação"
+          },
+          "service": {
+            "type": "string",
+            "description": "Nome do serviço"
+          }
+        }
+      },
+      "MondayTestResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok", "erro"],
+            "description": "Status do teste"
+          },
+          "monday_conectado": {
+            "type": "boolean",
+            "description": "Se a conexão com Monday.com está funcionando"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp do teste"
+          }
+        }
+      },
+      "ProdutoResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "Status da consulta"
+          },
+          "id_cliente": {
+            "type": "integer",
+            "description": "ID do cliente consultado"
+          },
+          "produto": {
+            "type": "string",
+            "enum": ["Fórmula Certa", "Phusion"],
+            "description": "Produto encontrado"
+          },
+          "responsavel": {
+            "type": "string",
+            "format": "email",
+            "description": "Email do responsável pelo produto"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp da consulta"
+          }
+        }
+      },
+      "ConfigResponse": {
+        "type": "object",
+        "properties": {
+          "produtos_validos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lista de produtos válidos"
+          },
+          "responsaveis": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "Mapeamento de produtos para responsáveis"
+          },
+          "caminhos_produtos": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Mapeamento de produtos para caminhos de pasta"
+          },
+          "servidor": {
+            "type": "object",
+            "properties": {
+              "porta": {
+                "type": "integer",
+                "description": "Porta do servidor"
+              },
+              "ambiente": {
+                "type": "string",
+                "description": "Ambiente de execução"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp da consulta"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Sistema",
+      "description": "Endpoints relacionados ao sistema e configurações"
+    },
+    {
+      "name": "Automação",
+      "description": "Endpoints para execução da automação principal"
+    },
+    {
+      "name": "Monday.com",
+      "description": "Endpoints para interação com Monday.com"
+    }
+  ]
+}

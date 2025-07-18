@@ -1,0 +1,25 @@
+# Render Blueprint para Monday API Automation
+# Desenvolvido por: Nathan Silva - Fagron Tech
+
+services:
+  - type: web
+    name: monday-api-automation
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        sync: false
+      - key: MONDAY_API_TOKEN
+        sync: false
+      - key: MONDAY_BOARD_ID
+        sync: false
+      - key: BASE_USER_PATH
+        value: /tmp
+      - key: MODEL_FILE_PATH
+        value: /tmp/modelo.vsdx
+    healthCheckPath: /health
+    autoDeploy: true
