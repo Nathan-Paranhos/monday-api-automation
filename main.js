@@ -61,6 +61,11 @@ class MondayAutomationAPI {
    * Configura todas as rotas da API
    */
   configurarRotas() {
+    // Rota raiz - redireciona para documentação
+    this.app.get('/', (req, res) => {
+      res.redirect('/api-docs');
+    });
+
     // Documentação Swagger
     this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
       customSiteTitle: 'Monday API Automation - Documentação',

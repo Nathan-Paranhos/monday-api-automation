@@ -34,18 +34,20 @@ const config = {
     // Caminhos específicos por produto
     products: {
       'Fórmula Certa': '#FCERTA EXTENSÃO',
-      'Phusion': '#PHUSION EXTENSÃO'
+      'Phusion': '#PHUSION EXTENSÃO',
+      'BOT': '#BOT EXTENSÃO'
     }
   },
 
   // Mapeamento de responsáveis por produto
   responsaveis: {
     'Fórmula Certa': 'Pedro.Ribeiro@fagrontech.com.br',
-    'Phusion': 'Bruno.Vaz@fagrontech.com.br'
+    'Phusion': 'Bruno.Vaz@fagrontech.com.br',
+    'BOT': 'suporte@fagrontech.com.br'
   },
 
   // Produtos válidos
-  produtosValidos: ['Fórmula Certa', 'Phusion'],
+  produtosValidos: ['Fórmula Certa', 'Phusion', 'BOT'],
 
   /**
    * Gera o caminho completo da pasta baseado no produto e ID do cliente

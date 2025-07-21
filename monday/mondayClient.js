@@ -217,19 +217,20 @@ class MondayClient {
       const farmaciasBOT = [];
 
       items.forEach(item => {
-        // Procura pela coluna "Produto"
+        // Procura pela coluna "Ferramenta de automação" que contém o tipo de produto
         const produtoColumn = item.column_values.find(col => 
           col.column && col.column.title && (
-            col.column.title.toLowerCase().includes('produto') ||
-            col.id === 'dropdown' ||
-            col.id === 'status'
+            col.column.title.toLowerCase().includes('ferramenta') ||
+            col.column.title.toLowerCase().includes('automação') ||
+            col.id === 'dropdown_mksr8wmg' // ID específico da coluna Ferramenta de automação
           )
         );
 
-        if (produtoColumn && produtoColumn.text && produtoColumn.text.trim() === 'BOT') {
+        if (produtoColumn && produtoColumn.text && 
+            (produtoColumn.text.trim() === 'BOT' || produtoColumn.text.trim().toLowerCase() === 'bot')) {
           farmaciasBOT.push({
             id: item.id,
-            elemento: item.name, // Nome da farmácia (ex: 2707 - BOULEVARD PHARMA)
+            elemento: item.name,
             produto: produtoColumn.text
           });
         }

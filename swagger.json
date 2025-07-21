@@ -15,6 +15,10 @@
   },
   "servers": [
     {
+      "url": "https://monday-api-automation.onrender.com",
+      "description": "Servidor de produção (Render)"
+    },
+    {
       "url": "http://localhost:3000",
       "description": "Servidor de desenvolvimento local"
     }
