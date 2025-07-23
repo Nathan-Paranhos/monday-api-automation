@@ -528,8 +528,6 @@ Para suporte técnico:
 
 **Equipe de desenvolvimento:**
 - **Nathan Silva**: Nathan.silva@fagrontech.com.br
-- **Pedro Ribeiro**: Pedro.Ribeiro@fagrontech.com.br
-- **Bruno Vaz**: Bruno.Vaz@fagrontech.com.br
 - **Jean Vencigueri**: Jean.Vencigueri@fagrontech.com.br
 
 ## 📝 Licença
