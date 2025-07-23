@@ -26,10 +26,13 @@ Automatizar via RPA a criação de uma estrutura de pastas para extensão de sis
 - ✅ Consulta automática ao Monday.com via GraphQL
 - ✅ Criação de estrutura de pastas baseada no produto
 - ✅ Cópia de arquivo modelo (.vsdx)
-- ✅ Associação de responsáveis por produto
+- ✅ **Suporte a múltiplos responsáveis por produto** 🆕
+- ✅ **Tratamento tolerante de emails não encontrados** 🆕
 - ✅ Atualização automática de status no Monday.com
 - ✅ Adição de observações nos itens do Monday.com
 - ✅ Filtragem de itens por status "Na Fila" e produtos específicos
+- ✅ **Extração automática de código de cliente do nome do item** 🆕
+- ✅ **Sistema de webhook para processamento automático** 🆕
 - ✅ Sistema completo de logs com Winston
 - ✅ Tratamento robusto de erros
 - ✅ API RESTful com Express
@@ -126,7 +129,71 @@ Certifique-se de que o arquivo modelo existe em:
 C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
 ```
 
+### 👥 Múltiplos Responsáveis
+
+**Nova funcionalidade!** O sistema agora suporta múltiplos responsáveis por produto:
+
+- **Configuração**: Defina arrays de emails no arquivo `config/config.js`
+- **Tolerância a falhas**: Emails não encontrados são ignorados com avisos
+- **Atribuição simultânea**: Todos os responsáveis válidos são atribuídos automaticamente
+- **Logs detalhados**: Informações sobre emails válidos e ignorados
+
+**Exemplo de configuração:**
+```javascript
+responsaveis: {
+  'BOT': [
+    'Nathan.silva@fagrontech.com.br',
+    'Pedro.Ribeiro@fagrontech.com.br',
+    'Bruno.Vaz@fagrontech.com.br',
+    'Jean.Vencigueri@fagrontech.com.br'
+  ],
+  'Fórmula Certa': ['responsavel1@email.com', 'responsavel2@email.com'],
+  'Phusion': ['responsavel3@email.com']
+}
+```
+
+## 🔄 Sistema de Webhook
+
+**Nova funcionalidade!** O sistema agora inclui processamento automático via webhook:
+
+- **Endpoint**: `POST /webhook` - Recebe notificações do Monday.com
+- **Processamento automático**: Detecta atualizações em produtos BOT
+- **Delay inteligente**: Aguarda 10 segundos antes de processar para evitar múltiplas execuções
+- **Filtragem automática**: Processa apenas itens com status "Na Fila" e produtos válidos
+- **Extração de código**: Extrai automaticamente códigos de cliente do nome do item
+
+### Configuração do Webhook no Monday.com
+
+1. Acesse Monday.com → Configurações → Integrações → Webhooks
+2. Adicione novo webhook com URL: `https://seu-dominio.com/webhook`
+3. Configure para disparar em: "Item Updated"
+4. Selecione o board apropriado
+
 ## 📡 API Endpoints
+
+### POST /webhook
+
+**Webhook do Monday.com** - Processa automaticamente atualizações de itens
+
+**Request (Monday.com):**
+```json
+{
+  "event": {
+    "type": "update_column_value",
+    "pulseId": 12345,
+    "boardId": 67890
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Webhook processado com sucesso",
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
 
 ### POST /automatizar
 
@@ -147,7 +214,12 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
   "produto": "BOT",
   "pasta": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345",
   "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
-  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
+  "responsaveis": [
+    "Nathan.silva@fagrontech.com.br",
+    "Pedro.Ribeiro@fagrontech.com.br",
+    "Bruno.Vaz@fagrontech.com.br",
+    "Jean.Vencigueri@fagrontech.com.br"
+  ],
   "cliente": {
     "id": 12345,
     "nome_farmacia": "Farmácia Exemplo"
@@ -202,7 +274,14 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
   "status": "ok",
   "id_cliente": 12345,
   "produto": "BOT",
-  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
+  "responsaveis": [
+    "Nathan.silva@fagrontech.com.br",
+    "Jean.Vencigueri@fagrontech.com.br"
+  ],
+  "emails_ignorados": [
+    "Pedro.Ribeiro@fagrontech.com.br",
+    "Bruno.Vaz@fagrontech.com.br"
+  ],
   "timestamp": "2024-01-15T10:30:00.000Z"
 }
 ```
@@ -217,7 +296,24 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
   "produtos_validos": ["BOT"],
   "status_validos": ["na fila", "em andamento", "concluido"],
   "responsaveis": {
-    "BOT": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br"
+    "BOT": [
+      "Nathan.silva@fagrontech.com.br",
+      "Pedro.Ribeiro@fagrontech.com.br",
+      "Bruno.Vaz@fagrontech.com.br",
+      "Jean.Vencigueri@fagrontech.com.br"
+    ],
+    "Fórmula Certa": [
+      "Nathan.silva@fagrontech.com.br",
+      "Pedro.Ribeiro@fagrontech.com.br",
+      "Bruno.Vaz@fagrontech.com.br",
+      "Jean.Vencigueri@fagrontech.com.br"
+    ],
+    "Phusion": [
+      "Nathan.silva@fagrontech.com.br",
+      "Pedro.Ribeiro@fagrontech.com.br",
+      "Bruno.Vaz@fagrontech.com.br",
+      "Jean.Vencigueri@fagrontech.com.br"
+    ]
   },
   "caminhos_produtos": {
     "BOT": "#BOT EXTENSÃO"
@@ -235,19 +331,28 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
 ```
 monday-api/
 ├── config/
-│   └── config.js          # Configurações centralizadas
+│   └── config.js                    # Configurações centralizadas
 ├── fileManager/
-│   └── fileManager.js     # Gerenciamento de arquivos e pastas
+│   └── fileManager.js               # Gerenciamento de arquivos e pastas
 ├── logs/
-│   ├── logger.js          # Configuração do Winston
-│   ├── combined.log       # Log geral (gerado automaticamente)
-│   └── error.log          # Log de erros (gerado automaticamente)
+│   ├── logger.js                    # Configuração do Winston
+│   ├── combined.log                 # Log geral (gerado automaticamente)
+│   └── error.log                    # Log de erros (gerado automaticamente)
 ├── monday/
-│   └── mondayClient.js    # Cliente GraphQL para Monday.com
-├── .env                   # Variáveis de ambiente
-├── main.js               # API principal Express
-├── package.json          # Dependências e scripts
-└── README.md            # Este arquivo
+│   └── mondayClient.js              # Cliente GraphQL para Monday.com
+├── tests/                           # 🆕 Scripts de teste
+│   ├── teste-bot.js                 # Teste específico para BOT
+│   ├── teste-campos-pastas.js       # Teste de campos e pastas
+│   ├── teste-configuracao.js        # Teste de configuração
+│   ├── teste-multiplos-responsaveis.js # Teste múltiplos responsáveis
+│   ├── teste-nova-demanda.js        # Teste nova demanda
+│   ├── teste-sistema-real.js        # Teste sistema real
+│   ├── teste-status-real.js         # Teste status real
+│   └── teste-webhook-pulseId.js     # Teste webhook
+├── .env                             # Variáveis de ambiente
+├── main.js                         # API principal Express
+├── package.json                    # Dependências e scripts
+└── README.md                      # Este arquivo
 ```
 
 ## 📊 Sistema de Logs
@@ -288,6 +393,27 @@ A API trata os seguintes tipos de erro:
 
 ## 🧪 Testando a API
 
+### Scripts de Teste Automatizados 🆕
+
+O projeto inclui vários scripts de teste para validar funcionalidades:
+
+```bash
+# Teste múltiplos responsáveis
+node teste-multiplos-responsaveis.js
+
+# Teste configuração geral
+node teste-configuracao.js
+
+# Teste sistema real
+node teste-sistema-real.js
+
+# Teste webhook
+node teste-webhook-pulseId.js
+
+# Teste específico BOT
+node teste-bot.js
+```
+
 ### Usando curl
 
 ```bash
@@ -296,6 +422,11 @@ curl http://localhost:3000/health
 
 # Teste de conexão Monday
 curl http://localhost:3000/test-monday
+
+# Webhook (simulação Monday.com)
+curl -X POST http://localhost:3000/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"event": {"type": "update_column_value", "pulseId": 12345, "boardId": 67890}}'
 
 # Automação principal
 curl -X POST http://localhost:3000/automatizar \
@@ -339,6 +470,55 @@ curl http://localhost:3000/produto/12345
 - Verifique se o board ID está correto
 - Confirme se o campo "Produto" existe no board
 
+### 🆕 Múltiplos responsáveis - alguns emails ignorados
+- **Normal**: Sistema ignora emails não encontrados no Monday.com
+- **Verificar logs**: Procure por avisos sobre emails ignorados
+- **Solução**: Confirme se os emails estão corretos e existem no Monday.com
+
+### 🆕 Webhook não funciona
+- Verifique se a URL do webhook está correta no Monday.com
+- Confirme se o servidor está acessível externamente
+- Teste com `ngrok` para desenvolvimento local
+
+### 🆕 Extração de código de cliente falha
+- Verifique se o nome do item contém números
+- Formato esperado: "Nome do Cliente 12345" ou "12345 - Descrição"
+- Logs mostrarão se a extração foi bem-sucedida
+
+## 📋 Changelog
+
+### v2.0.0 - Janeiro 2024 🆕
+
+**Novas Funcionalidades:**
+- ✅ **Múltiplos responsáveis por produto**: Suporte a arrays de emails
+- ✅ **Tratamento tolerante de emails**: Ignora emails não encontrados com avisos
+- ✅ **Sistema de webhook**: Processamento automático via Monday.com
+- ✅ **Extração automática de código**: Detecta códigos de cliente no nome do item
+- ✅ **Scripts de teste**: 8 scripts automatizados para validação
+- ✅ **Logs aprimorados**: Informações detalhadas sobre processamento
+
+**Melhorias:**
+- 🔧 **Função `atribuirResponsavel`**: Aceita strings ou arrays
+- 🔧 **Função `obterResponsavel`**: Retorna strings ou arrays
+- 🔧 **Configuração `config.js`**: Suporte a múltiplos formatos
+- 🔧 **Tratamento de erros**: Mais robusto e informativo
+
+**Arquivos Modificados:**
+- `config/config.js` - Configuração de múltiplos responsáveis
+- `utils/mondayClient.js` - Lógica de atribuição aprimorada
+- `index.js` - Endpoint de webhook adicionado
+- `README.md` - Documentação completa atualizada
+
+### v1.0.0 - Dezembro 2023
+
+**Funcionalidades Iniciais:**
+- ✅ Consulta automática ao Monday.com
+- ✅ Criação de estrutura de pastas
+- ✅ Cópia de arquivo modelo
+- ✅ Atribuição de responsáveis (único)
+- ✅ Sistema de logs com Winston
+- ✅ API RESTful com Express
+
 ## 📞 Suporte
 
 Para suporte técnico:
@@ -346,6 +526,18 @@ Para suporte técnico:
 - Teste a conexão com `/test-monday`
 - Valide as configurações com `/config`
 
+**Equipe de desenvolvimento:**
+- **Nathan Silva**: Nathan.silva@fagrontech.com.br
+- **Pedro Ribeiro**: Pedro.Ribeiro@fagrontech.com.br
+- **Bruno Vaz**: Bruno.Vaz@fagrontech.com.br
+- **Jean Vencigueri**: Jean.Vencigueri@fagrontech.com.br
+
 ## 📝 Licença
 
 ISC License - Fagron Tech
+
+---
+
+**Última atualização**: Janeiro 2024  
+**Versão**: 2.0.0  
+**Desenvolvido por**: Equipe Fagron Tech
