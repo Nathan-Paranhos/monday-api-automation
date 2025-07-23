@@ -16,11 +16,11 @@
   "servers": [
     {
       "url": "https://monday-api-automation.onrender.com",
-      "description": "Servidor de produção (Render)"
+      "description": "Servidor de Produção (Render) - GitHub: https://github.com/Nathan-Paranhos/monday-api-automation"
     },
     {
       "url": "http://localhost:3000",
-      "description": "Servidor de desenvolvimento local"
+      "description": "Servidor de Desenvolvimento Local"
     }
   ],
   "paths": {
@@ -63,7 +63,7 @@
                 "$ref": "#/components/schemas/AutomacaoRequest"
               },
               "example": {
-                "id_cliente": 12345,
+                "id_cliente": 3333,
                 "nome_farmacia": "Farmácia Exemplo"
               }
             }
@@ -78,11 +78,21 @@
                   "$ref": "#/components/schemas/AutomacaoSuccessResponse"
                 },
                 "example": {
-                  "status": "ok",
-                  "produto": "Fórmula Certa",
-                  "pasta": "C:\\Users\\Usuario\\OneDrive\\#FCERTA EXTENSÃO\\12345",
-                  "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#FCERTA EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
-                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br",
+                  "operacao_status": "ok",
+                  "produto": "BOT",
+                  "principal_produto": "Fórmula Certa",
+                  "status": {
+                    "original": "Na Fila",
+                    "normalizado": "na_fila"
+                  },
+                  "elemento": "12345 - Farmácia Exemplo",
+                  "campos": {
+                    "data_solicitacao": "2024-01-10",
+                    "tipo_rx": "Fórmula Certa"
+                  },
+                  "pasta": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345",
+                  "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
+                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
                   "cliente": {
                     "id": 12345,
                     "nome_farmacia": "Farmácia Exemplo"
@@ -233,10 +243,20 @@
                   "$ref": "#/components/schemas/ProdutoResponse"
                 },
                 "example": {
-                  "status": "ok",
+                  "operacao_status": "ok",
                   "id_cliente": 12345,
-                  "produto": "Fórmula Certa",
-                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br",
+                  "produto": "BOT",
+                  "principal_produto": "Fórmula Certa",
+                  "status": {
+                    "original": "Na Fila",
+                    "normalizado": "na_fila"
+                  },
+                  "elemento": "12345 - FARMÁCIA EXEMPLO",
+                  "campos": {
+                    "data_solicitacao": "2024-01-10",
+                    "tipo_rx": "Fórmula Certa"
+                  },
+                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
                   "timestamp": "2024-01-15T10:30:00.000Z"
                 }
               }
@@ -271,6 +291,26 @@
         "summary": "Buscar Farmácias com Produto BOT",
         "description": "Busca todas as farmácias que possuem o produto 'BOT' no Monday.com",
         "operationId": "buscarFarmaciasBOT",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtrar por status normalizado",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "produto_principal",
+            "in": "query",
+            "description": "Filtrar por produto principal",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Farmácias com produto BOT encontradas",
@@ -282,16 +322,30 @@
                 "example": {
                   "status": "ok",
                   "total": 2,
+                  "filtros": {
+                    "status": "na_fila",
+                    "produto_principal": "Fórmula Certa"
+                  },
                   "farmacias": [
                     {
                       "id": "123456789",
                       "elemento": "2707 - BOULEVARD PHARMA",
-                      "produto": "BOT"
+                      "produto": "BOT",
+                      "principal_produto": "Fórmula Certa",
+                      "status": {
+                        "original": "Na Fila",
+                        "normalizado": "na_fila"
+                      }
                     },
                     {
                       "id": "987654321",
                       "elemento": "3456 - FARMÁCIA CENTRAL",
-                      "produto": "BOT"
+                      "produto": "BOT",
+                      "principal_produto": "Fórmula Certa",
+                      "status": {
+                        "original": "Na Fila",
+                        "normalizado": "na_fila"
+                      }
                     }
                   ],
                   "timestamp": "2024-01-15T10:30:00.000Z"
@@ -327,20 +381,80 @@
                   "$ref": "#/components/schemas/ConfigResponse"
                 },
                 "example": {
-                  "produtos_validos": ["Fórmula Certa", "Phusion"],
+                  "produtos_validos": ["BOT"],
+                  "status_validos": ["na fila", "em andamento", "concluido"],
                   "responsaveis": {
-                    "Fórmula Certa": "Pedro.Ribeiro@fagrontech.com.br",
-                    "Phusion": "Bruno.Vaz@fagrontech.com.br"
+                    "BOT": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br"
                   },
                   "caminhos_produtos": {
-                    "Fórmula Certa": "#FCERTA EXTENSÃO",
-                    "Phusion": "#PHUSION EXTENSÃO"
+                    "BOT": "#BOT EXTENSÃO"
                   },
                   "servidor": {
                     "porta": 3000,
                     "ambiente": "development"
                   },
                   "timestamp": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook/monday": {
+      "post": {
+        "tags": ["Webhook"],
+        "summary": "Webhook do Monday.com",
+        "description": "Endpoint para receber notificações automáticas do Monday.com quando o produto 'BOT' é selecionado",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "example": "change_column_value"
+                      },
+                      "columnId": {
+                        "type": "string",
+                        "example": "produto"
+                      },
+                      "pulseId": {
+                        "type": "string",
+                        "example": "123456789"
+                      }
+                    }
+                  }
+                },
+                "required": ["event"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook processado com sucesso",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Webhook recebido com sucesso"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao processar webhook",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Erro ao processar webhook"
                 }
               }
             }
@@ -372,15 +486,33 @@
       "AutomacaoSuccessResponse": {
         "type": "object",
         "properties": {
-          "status": {
+          "operacao_status": {
             "type": "string",
             "enum": ["ok"],
             "description": "Status da operação"
           },
           "produto": {
             "type": "string",
-            "enum": ["Fórmula Certa", "Phusion"],
+            "enum": ["BOT", "Fórmula Certa", "Phusion"],
             "description": "Produto encontrado no Monday.com"
+          },
+          "principal_produto": {
+            "type": "string",
+            "description": "Principal produto associado ao item no Monday.com"
+          },
+          "status": {
+            "type": "object",
+            "properties": {
+              "original": {
+                "type": "string",
+                "description": "Status original do Monday.com"
+              },
+              "normalizado": {
+                "type": "string",
+                "description": "Status normalizado para uso interno"
+              }
+            },
+            "description": "Informações de status do item"
           },
           "pasta": {
             "type": "string",
@@ -392,8 +524,17 @@
           },
           "responsavel": {
             "type": "string",
-            "format": "email",
-            "description": "Email do responsável pelo produto"
+            "description": "Email do responsável pelo produto. Para o produto BOT, contém múltiplos emails separados por vírgula."
+          },
+          "elemento": {
+            "type": "string",
+            "description": "Campo elemento do Monday.com que contém o código do cliente e nome da farmácia (formato: 'CÓDIGO - NOME_FARMACIA')",
+            "example": "12345 - Farmácia Exemplo"
+          },
+          "campos": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Campos adicionais do Monday.com"
           },
           "cliente": {
             "type": "object",
@@ -489,7 +630,7 @@
       "ProdutoResponse": {
         "type": "object",
         "properties": {
-          "status": {
+          "operacao_status": {
             "type": "string",
             "enum": ["ok"],
             "description": "Status da consulta"
@@ -500,13 +641,40 @@
           },
           "produto": {
             "type": "string",
-            "enum": ["Fórmula Certa", "Phusion"],
+            "enum": ["BOT", "Fórmula Certa", "Phusion"],
             "description": "Produto encontrado"
+          },
+          "principal_produto": {
+            "type": "string",
+            "description": "Principal produto associado ao item no Monday.com"
+          },
+          "status": {
+            "type": "object",
+            "properties": {
+              "original": {
+                "type": "string",
+                "description": "Status original do Monday.com"
+              },
+              "normalizado": {
+                "type": "string",
+                "description": "Status normalizado para uso interno"
+              }
+            },
+            "description": "Informações de status do item"
+          },
+          "elemento": {
+            "type": "string",
+            "description": "Campo elemento do Monday.com que contém o código do cliente e nome da farmácia (formato: 'CÓDIGO - NOME_FARMACIA')",
+            "example": "12345 - Farmácia Exemplo"
+          },
+          "campos": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Campos adicionais do Monday.com"
           },
           "responsavel": {
             "type": "string",
-            "format": "email",
-            "description": "Email do responsável pelo produto"
+            "description": "Email do responsável pelo produto. Para o produto BOT, contém múltiplos emails separados por vírgula."
           },
           "timestamp": {
             "type": "string",
@@ -528,6 +696,22 @@
             "minimum": 0,
             "description": "Número total de farmácias encontradas com produto BOT"
           },
+          "filtros": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Filtro de status normalizado aplicado (se houver)",
+                "enum": ["na fila", "em andamento", "concluido", "finalizado", "pausado", "cancelado", "relacionamento", "pausado features", "aguardando 3º", "desenvolvimento", "aguardando implantações", "pausado cliente", "inadimplente"]
+              },
+              "produto_principal": {
+                "type": "string",
+                "description": "Filtro de produto principal aplicado (se houver)",
+                "enum": ["BOT", "Fórmula Certa", "Phusion"]
+              }
+            },
+            "description": "Filtros aplicados na consulta"
+          },
           "farmacias": {
             "type": "array",
             "items": {
@@ -545,6 +729,29 @@
                   "type": "string",
                   "enum": ["BOT"],
                   "description": "Produto encontrado (sempre BOT nesta consulta)"
+                },
+                "principal_produto": {
+                  "type": "string",
+                  "description": "Principal produto associado ao item no Monday.com"
+                },
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "string",
+                      "description": "Status original do Monday.com"
+                    },
+                    "normalizado": {
+                      "type": "string",
+                      "description": "Status normalizado para uso interno"
+                    }
+                  },
+                  "description": "Informações de status do item"
+                },
+                "campos": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Campos adicionais do Monday.com"
                 }
               },
               "required": ["id", "elemento", "produto"]
@@ -568,6 +775,13 @@
               "type": "string"
             },
             "description": "Lista de produtos válidos"
+          },
+          "status_validos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lista de status válidos"
           },
           "responsaveis": {
             "type": "object",
@@ -618,6 +832,10 @@
     {
       "name": "Monday.com",
       "description": "Endpoints para interação com Monday.com"
+    },
+    {
+      "name": "Webhook",
+      "description": "Endpoints para receber notificações automáticas"
     }
   ]
 }

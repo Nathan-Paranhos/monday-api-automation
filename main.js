@@ -97,6 +97,9 @@ class MondayAutomationAPI {
     
     // Rota para listar configurações (sem dados sensíveis)
     this.app.get('/config', this.obterConfiguracoes.bind(this));
+    
+    // Rota do webhook do Monday.com
+    this.app.post('/webhook/monday', this.processarWebhookMonday.bind(this));
   }
 
   /**
@@ -122,31 +125,38 @@ class MondayAutomationAPI {
       logInicioProcessamento(id_cliente, nome_farmacia);
 
       // Etapa 1: Consultar produto no Monday.com
-      let produto;
+      let produtoInfo;
       try {
-        produto = await this.mondayClient.consultarProdutoPorCliente(id_cliente);
+        produtoInfo = await this.mondayClient.consultarProdutoPorCliente(id_cliente);
       } catch (error) {
         // Tenta buscar por nome da farmácia como fallback
         try {
-          produto = await this.mondayClient.consultarProdutoPorNome(nome_farmacia);
+          produtoInfo = await this.mondayClient.consultarProdutoPorNome(nome_farmacia);
         } catch (fallbackError) {
           throw new Error(`Não foi possível encontrar o produto. Erro principal: ${error.message}. Erro fallback: ${fallbackError.message}`);
         }
       }
 
       // Etapa 2: Criar estrutura de pastas e copiar arquivo
-      const resultadoArquivos = await this.fileManager.processarCliente(produto, id_cliente);
+      const resultadoArquivos = await this.fileManager.processarCliente(produtoInfo.produto, id_cliente);
 
       // Etapa 3: Obter responsável pelo produto
-      const responsavel = config.obterResponsavel(produto);
+      const responsavel = config.obterResponsavel(produtoInfo.produto);
 
-      // Monta resposta de sucesso
+      // Monta resposta de sucesso com informações detalhadas
       const resultado = {
         status: 'ok',
-        produto: produto,
+        produto: produtoInfo.produto,
+        principal_produto: produtoInfo.principalProduto || null,
+        status: {
+          original: produtoInfo.statusOriginal || null,
+          normalizado: produtoInfo.statusNormalizado || null
+        },
         pasta: resultadoArquivos.caminhoPasta,
         arquivo_modelo: resultadoArquivos.caminhoArquivo,
         responsavel: responsavel,
+        elemento: produtoInfo.elemento || null,
+        campos: produtoInfo.campos || {},
         cliente: {
           id: id_cliente,
           nome_farmacia: nome_farmacia
@@ -229,16 +239,29 @@ class MondayAutomationAPI {
         });
       }
 
-      const produto = await this.mondayClient.consultarProdutoPorCliente(idCliente);
-      const responsavel = config.obterResponsavel(produto);
+      // Consulta o produto no Monday.com
+      const produtoInfo = await this.mondayClient.consultarProdutoPorCliente(idCliente);
       
-      res.json({
+      // Obtém o responsável pelo produto
+      const responsavel = config.obterResponsavel(produtoInfo.produto);
+      
+      // Prepara a resposta com informações detalhadas
+      const resposta = {
         status: 'ok',
         id_cliente: idCliente,
-        produto: produto,
+        produto: produtoInfo.produto,
+        principal_produto: produtoInfo.principalProduto || null,
+        status: {
+          original: produtoInfo.statusOriginal || null,
+          normalizado: produtoInfo.statusNormalizado || null
+        },
         responsavel: responsavel,
+        elemento: produtoInfo.elemento || null,
+        campos: produtoInfo.campos || {},
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      res.json(resposta);
     } catch (error) {
       res.status(404).json({
         status: 'erro',
@@ -256,14 +279,54 @@ class MondayAutomationAPI {
    */
   async buscarFarmaciasBOT(req, res) {
     try {
+      // Parâmetros opcionais de filtro
+      const { status, produto_principal } = req.query;
+      
+      // Busca todas as farmácias BOT
       const farmaciasBOT = await this.mondayClient.buscarFarmaciasBOT();
       
-      res.json({
+      // Aplica filtros se necessário
+      let farmaciasFiltradas = farmaciasBOT;
+      
+      if (status) {
+        const statusNormalizado = config.normalizarStatus(status);
+        if (config.isStatusValido(statusNormalizado)) {
+          farmaciasFiltradas = farmaciasFiltradas.filter(farmacia => 
+            farmacia.statusNormalizado === statusNormalizado
+          );
+        }
+      }
+      
+      if (produto_principal) {
+        farmaciasFiltradas = farmaciasFiltradas.filter(farmacia => 
+          farmacia.principalProduto && 
+          farmacia.principalProduto.toLowerCase().includes(produto_principal.toLowerCase())
+        );
+      }
+      
+      // Prepara a resposta com informações detalhadas
+      const resposta = {
         status: 'ok',
-        total: farmaciasBOT.length,
-        farmacias: farmaciasBOT,
+        total: farmaciasFiltradas.length,
+        farmacias: farmaciasFiltradas.map(farmacia => ({
+          id: farmacia.id,
+          elemento: farmacia.elemento,
+          produto: farmacia.produto,
+          principal_produto: farmacia.principalProduto || null,
+          status: {
+            original: farmacia.statusOriginal || null,
+            normalizado: farmacia.statusNormalizado || null
+          },
+          campos: farmacia.campos || {}
+        })),
+        filtros_aplicados: {
+          status: status || null,
+          produto_principal: produto_principal || null
+        },
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      res.json(resposta);
     } catch (error) {
       logErro('Busca farmácias BOT', error);
       res.status(500).json({
@@ -277,6 +340,59 @@ class MondayAutomationAPI {
   }
 
   /**
+   * Processa webhook do Monday.com
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  async processarWebhookMonday(req, res) {
+    try {
+      const { event, challenge } = req.body;
+      
+      // Se for um challenge de verificação, retorna o challenge
+      if (challenge) {
+        return res.status(200).json({ challenge });
+      }
+      
+      // Verifica se é um evento de mudança de coluna
+      if (event && event.type === 'change_column_value' && event.columnId === 'produto') {
+        const { pulseId, value } = event;
+        
+        console.log(`📥 Webhook recebido - PulseId: ${pulseId}, Produto: ${value?.label || 'N/A'}`);
+        
+        // Aqui você pode processar a automação baseada no pulseId
+        // Por exemplo, buscar informações do item no Monday.com
+        try {
+          const produtoInfo = await this.mondayClient.consultarProdutoPorPulseId(pulseId);
+          console.log(`✅ Produto encontrado: ${produtoInfo.produto}`);
+        } catch (error) {
+          console.log(`⚠️ Erro ao buscar produto para pulseId ${pulseId}: ${error.message}`);
+        }
+        
+        res.status(200).json({
+          status: 'ok',
+          message: 'Webhook processado com sucesso',
+          pulseId: pulseId,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(200).json({
+          status: 'ok',
+          message: 'Evento ignorado - não é mudança de produto',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erro ao processar webhook:', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: 'Erro ao processar webhook',
+        codigo: 'WEBHOOK_ERROR',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
    * Retorna configurações da aplicação (sem dados sensíveis)
    * @param {Request} req - Requisição Express
    * @param {Response} res - Resposta Express
@@ -284,6 +400,7 @@ class MondayAutomationAPI {
   obterConfiguracoes(req, res) {
     res.json({
       produtos_validos: config.produtosValidos,
+      status_validos: config.statusValidos,
       responsaveis: config.responsaveis,
       caminhos_produtos: config.paths.products,
       servidor: {
@@ -359,6 +476,7 @@ class MondayAutomationAPI {
       console.log(`📋 Rotas disponíveis:`);
       console.log(`   📚 GET  /api-docs - Documentação Swagger`);
       console.log(`   🔄 POST /automatizar - Automação principal`);
+      console.log(`   📥 POST /webhook/monday - Webhook Monday.com (pulseId)`);
       console.log(`   ❤️  GET  /health - Health check`);
       console.log(`   🔗 GET  /test-monday - Teste de conexão Monday`);
       console.log(`   🔍 GET  /produto/:id - Consultar produto por ID`);

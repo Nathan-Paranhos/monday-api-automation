@@ -53,8 +53,7 @@ const loggerHelper = {
   logInicioProcessamento(idCliente, nomeFarmacia) {
     logger.info('Iniciando processamento', {
       idCliente,
-      nomeFarmacia,
-      timestamp: new Date().toISOString()
+      nomeFarmacia
     });
   },
 
@@ -66,8 +65,7 @@ const loggerHelper = {
   logConsultaMonday(idCliente, produto) {
     logger.info('Consulta ao Monday realizada', {
       idCliente,
-      produto,
-      timestamp: new Date().toISOString()
+      produto
     });
   },
 
@@ -79,8 +77,7 @@ const loggerHelper = {
   logCriacaoPasta(caminhoPasta, produto) {
     logger.info('Pasta criada com sucesso', {
       caminhoPasta,
-      produto,
-      timestamp: new Date().toISOString()
+      produto
     });
   },
 
@@ -92,8 +89,7 @@ const loggerHelper = {
   logCopiaArquivo(origem, destino) {
     logger.info('Arquivo copiado com sucesso', {
       origem,
-      destino,
-      timestamp: new Date().toISOString()
+      destino
     });
   },
 
@@ -103,8 +99,7 @@ const loggerHelper = {
    */
   logSucesso(resultado) {
     logger.info('Processamento concluído com sucesso', {
-      resultado,
-      timestamp: new Date().toISOString()
+      resultado
     });
   },
 
@@ -119,8 +114,7 @@ const loggerHelper = {
       operacao,
       erro: erro.message,
       stack: erro.stack,
-      contexto,
-      timestamp: new Date().toISOString()
+      contexto
     });
   },
 
@@ -135,8 +129,7 @@ const loggerHelper = {
     logger[nivel]('Validação realizada', {
       tipo,
       sucesso,
-      dados,
-      timestamp: new Date().toISOString()
+      dados
     });
   }
 };

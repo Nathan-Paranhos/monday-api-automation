@@ -29,7 +29,8 @@ class FileManager {
       }
       
       // Cria a pasta recursivamente (cria diretórios pais se necessário)
-      await fs.ensureDir(caminhoPasta);
+      // Define permissões explícitas para melhorar a segurança
+      await fs.ensureDir(caminhoPasta, { mode: 0o755 });
       
       logCriacaoPasta(caminhoPasta, produto);
       
@@ -81,13 +82,13 @@ class FileManager {
       const destinoExiste = await fs.pathExists(caminhoDestino);
       
       if (destinoExiste) {
-        logCopiaArquivo(caminhoOrigem, caminhoDestino);
         return caminhoDestino;
       }
       
       // Copia o arquivo
       await fs.copy(caminhoOrigem, caminhoDestino);
       
+      // Loga apenas quando a cópia realmente ocorre
       logCopiaArquivo(caminhoOrigem, caminhoDestino);
       
       return caminhoDestino;
@@ -115,7 +116,7 @@ class FileManager {
   /**
    * Processo completo: cria pasta e copia arquivo modelo
    * @param {string} produto - Nome do produto
-   * @param {number} idCliente - ID do cliente
+   * @param {number|string} idCliente - ID do cliente
    * @returns {Promise<object>} Objeto com caminho da pasta e arquivo copiado
    */
   async processarCliente(produto, idCliente) {
@@ -125,6 +126,19 @@ class FileManager {
         throw new Error(`Produto inválido: ${produto}`);
       }
       
+      // Valida o ID do cliente
+      if (idCliente === undefined || idCliente === null) {
+        throw new Error('ID do cliente não fornecido');
+      }
+      
+      // Converte para número se for string
+      const idClienteNumerico = typeof idCliente === 'string' ? parseInt(idCliente, 10) : idCliente;
+      
+      // Verifica se é um número válido
+      if (!Number.isInteger(idClienteNumerico) || isNaN(idClienteNumerico)) {
+        throw new Error(`ID do cliente inválido: ${idCliente}. Deve ser um número inteiro.`);
+      }
+      
       // Cria a estrutura de pasta
       const caminhoPasta = await this.criarEstruturaPasta(produto, idCliente);
       
@@ -132,6 +146,7 @@ class FileManager {
       const caminhoArquivo = await this.copiarArquivoModelo(caminhoPasta, idCliente);
       
       return {
+        sucesso: true,
         caminhoPasta,
         caminhoArquivo,
         produto,
@@ -140,7 +155,12 @@ class FileManager {
       
     } catch (error) {
       logErro('Processamento completo do cliente', error, { produto, idCliente });
-      throw error;
+      return {
+        sucesso: false,
+        mensagem: error.message,
+        produto,
+        idCliente
+      };
     }
   }
 

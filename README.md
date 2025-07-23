@@ -1,10 +1,25 @@
 # Monday API Automation
 
-API Node.js para automatizar a criação de estrutura de pastas baseada em demandas do Monday.com, definindo analistas responsáveis por produto.
+## 📋 Descrição
+
+API para automatizar a criação de estrutura de pastas baseada em demandas do Monday.com. O sistema consulta informações de produtos no Monday.com e cria automaticamente a estrutura de pastas necessária para cada cliente.
+
+**🔗 Produção:** https://monday-api-automation.onrender.com  
+**📂 GitHub:** https://github.com/Nathan-Paranhos/monday-api-automation  
+**👨‍💻 Desenvolvido por:** Nathan Silva - Fagron Tech
+
+## 🎯 Campo Elemento
+
+O sistema identifica automaticamente o campo **'elemento'** do Monday.com, que contém:
+- **Código do Cliente** 
+- **Nome da Farmácia**
+- **Formato:** `CÓDIGO - NOME_FARMACIA`
+
+Este campo é essencial para o processamento automático e está presente em todas as respostas da API.
 
 ## 🎯 Objetivo
 
-Automatizar via RPA a criação de uma estrutura de pastas para extensão de sistemas baseada em demandas no Monday.com, definindo o analista responsável por produto.
+Automatizar via RPA a criação de uma estrutura de pastas para extensão de sistemas baseada em demandas no Monday.com, definindo o analista responsável por produto, atualizando o status das demandas e adicionando observações relevantes. Especificamente, o sistema identifica clientes com status "Na Fila", grupo BOT, e produto Fórmula Certa ou Phusion, cria a estrutura de pastas apropriada, copia o modelo de fluxo de atendimento, atribui o responsável adequado e atualiza o status para "Em Andamento".
 
 ## 📋 Funcionalidades
 
@@ -12,6 +27,9 @@ Automatizar via RPA a criação de uma estrutura de pastas para extensão de sis
 - ✅ Criação de estrutura de pastas baseada no produto
 - ✅ Cópia de arquivo modelo (.vsdx)
 - ✅ Associação de responsáveis por produto
+- ✅ Atualização automática de status no Monday.com
+- ✅ Adição de observações nos itens do Monday.com
+- ✅ Filtragem de itens por status "Na Fila" e produtos específicos
 - ✅ Sistema completo de logs com Winston
 - ✅ Tratamento robusto de erros
 - ✅ API RESTful com Express
@@ -99,6 +117,7 @@ A API criará pastas nos seguintes caminhos:
 
 - **Fórmula Certa**: `C:\Users\{User}\OneDrive\#FCERTA EXTENSÃO\{ID}`
 - **Phusion**: `C:\Users\{User}\OneDrive\#PHUSION EXTENSÃO\{ID}`
+- **BOT**: `C:\Users\{User}\OneDrive\#BOT EXTENSÃO\{ID}`
 
 ### Arquivo Modelo
 
@@ -125,10 +144,10 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
 ```json
 {
   "status": "ok",
-  "produto": "Fórmula Certa",
-  "pasta": "C:\\Users\\Usuario\\OneDrive\\#FCERTA EXTENSÃO\\12345",
-  "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#FCERTA EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
-  "responsavel": "Pedro.Ribeiro@fagrontech.com.br",
+  "produto": "BOT",
+  "pasta": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345",
+  "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
+  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
   "cliente": {
     "id": 12345,
     "nome_farmacia": "Farmácia Exemplo"
@@ -182,8 +201,8 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
 {
   "status": "ok",
   "id_cliente": 12345,
-  "produto": "Fórmula Certa",
-  "responsavel": "Pedro.Ribeiro@fagrontech.com.br",
+  "produto": "BOT",
+  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
   "timestamp": "2024-01-15T10:30:00.000Z"
 }
 ```
@@ -195,14 +214,13 @@ C:\OneDrive\Onboarding\#Backoffice\#BOT Extensão\Modelo Fluxo.vsdx
 **Response:**
 ```json
 {
-  "produtos_validos": ["Fórmula Certa", "Phusion"],
+  "produtos_validos": ["BOT"],
+  "status_validos": ["na fila", "em andamento", "concluido"],
   "responsaveis": {
-    "Fórmula Certa": "Pedro.Ribeiro@fagrontech.com.br",
-    "Phusion": "Bruno.Vaz@fagrontech.com.br"
+    "BOT": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br"
   },
   "caminhos_produtos": {
-    "Fórmula Certa": "#FCERTA EXTENSÃO",
-    "Phusion": "#PHUSION EXTENSÃO"
+    "BOT": "#BOT EXTENSÃO"
   },
   "servidor": {
     "porta": 3000,
