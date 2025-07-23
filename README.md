@@ -487,7 +487,7 @@ curl http://localhost:3000/produto/12345
 
 ## 📋 Changelog
 
-### v2.0.0 - Janeiro 2024 🆕
+### v2.0.0 - Julho 2025 🆕
 
 **Novas Funcionalidades:**
 - ✅ **Múltiplos responsáveis por produto**: Suporte a arrays de emails
@@ -509,7 +509,7 @@ curl http://localhost:3000/produto/12345
 - `index.js` - Endpoint de webhook adicionado
 - `README.md` - Documentação completa atualizada
 
-### v1.0.0 - Dezembro 2023
+### v1.0.0 - junho 2025
 
 **Funcionalidades Iniciais:**
 - ✅ Consulta automática ao Monday.com
@@ -536,6 +536,6 @@ ISC License - Fagron Tech
 
 ---
 
-**Última atualização**: Janeiro 2024  
+**Última atualização**: Julho 2025  
 **Versão**: 2.0.0  
 **Desenvolvido por**: Equipe Fagron Tech
