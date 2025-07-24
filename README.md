@@ -33,6 +33,10 @@ Automatizar via RPA a criação de uma estrutura de pastas para extensão de sis
 - ✅ Filtragem de itens por status "Na Fila" e produtos específicos
 - ✅ **Extração automática de código de cliente do nome do item** 🆕
 - ✅ **Sistema de webhook para processamento automático** 🆕
+- ✅ **Detecção de novos itens criados no Monday.com** 🆕
+- ✅ **Endpoints de teste e health check** 🆕
+- ✅ **Containerização com Docker** 🆕
+- ✅ **Configuração para PM2 em produção** 🆕
 - ✅ Sistema completo de logs com Winston
 - ✅ Tratamento robusto de erros
 - ✅ API RESTful com Express
@@ -54,6 +58,42 @@ Para deploy em produção no Render, consulte o arquivo [DEPLOY.md](./DEPLOY.md)
 2. Conecte no [Render](https://render.com)
 3. Configure as variáveis de ambiente
 4. Deploy automático! ✨
+
+### Deploy com Docker 🐳
+
+O projeto inclui configuração completa para Docker:
+
+```bash
+# Build da imagem
+docker build -t monday-webhook .
+
+# Executar container
+docker run -d \
+  --name monday-webhook-prod \
+  -p 10000:10000 \
+  --env-file .env.production \
+  monday-webhook
+```
+
+Ou usando Docker Compose:
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Deploy com PM2 🔄
+
+Para ambientes de produção com Node.js:
+
+```bash
+# Instalar PM2 globalmente
+npm install -g pm2
+
+# Iniciar aplicação
+pm2 start ecosystem.config.js --env production
+```
+
+Consulte [PRODUCTION-GUIDE.md](./PRODUCTION-GUIDE.md) para instruções detalhadas.
 
 ### Passos
 
@@ -100,7 +140,52 @@ Para deploy em produção no Render, consulte o arquivo [DEPLOY.md](./DEPLOY.md)
    npm run dev
    ```
 
+   Para produção:
+   ```bash
+   npm run start:prod
+   ```
+
+   Para executar apenas o webhook:
+   ```bash
+   npm run start:webhook
+   ```
+
+   Para testar a detecção de novos itens:
+   ```bash
+   npm run test-detection
+   ```
+
+## 🔄 Scripts de Produção
+
+O projeto inclui scripts de inicialização para ambientes de produção:
+
+### Windows PowerShell
+```powershell
+.\start-production.ps1
+```
+
+### Linux/Mac
+```bash
+chmod +x start-production.sh
+./start-production.sh
+```
+
+Estes scripts automatizam:
+- ✅ Verificação de pré-requisitos
+- ✅ Instalação de dependências
+- ✅ Testes básicos
+- ✅ Configuração de diretórios
+- ✅ Inicialização do servidor em modo produção
+
 ## ⚙️ Configuração
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor, leia o [guia de contribuição](./CONTRIBUTING.md) para detalhes sobre como contribuir para o projeto.
+
+## 📄 Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](./LICENSE) para detalhes.
 
 ### Monday.com
 
@@ -487,7 +572,7 @@ curl http://localhost:3000/produto/12345
 
 ## 📋 Changelog
 
-### v2.0.0 - Janeiro 2024 🆕
+### v2.0.0 - Julho 2025 🆕
 
 **Novas Funcionalidades:**
 - ✅ **Múltiplos responsáveis por produto**: Suporte a arrays de emails
@@ -509,7 +594,7 @@ curl http://localhost:3000/produto/12345
 - `index.js` - Endpoint de webhook adicionado
 - `README.md` - Documentação completa atualizada
 
-### v1.0.0 - Dezembro 2023
+### v1.0.0 - Junho 2024
 
 **Funcionalidades Iniciais:**
 - ✅ Consulta automática ao Monday.com

@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Manter dependências npm atualizadas
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    target-branch: "main"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Ignorar atualizações de dependências específicas
+    # ignore:
+    #   - dependency-name: "express"
+    #     versions: ["4.x", "5.x"]
+
+  # Manter dependências do GitHub Actions atualizadas
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore"
+      include: "scope"

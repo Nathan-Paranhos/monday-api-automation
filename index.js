@@ -14,6 +14,23 @@ app.post('/webhook/monday', async (req, res) => {
   try {
     const { event } = req.body;
     
+    logger.info(`Webhook recebido - Tipo: ${event?.type}, Item ID: ${event?.pulseId}`);
+    
+    // Verifica se é um evento de criação de item
+    if (event && event.type === 'create_pulse') {
+      const itemId = event.pulseId;
+      logger.info(`Novo item criado: ${itemId} - Aguardando 15 segundos para processamento`);
+      
+      // Aguarda 15 segundos para que todos os campos sejam preenchidos
+      setTimeout(async () => {
+        try {
+          await processarNovoItem(itemId);
+        } catch (error) {
+          logErro('Processamento de novo item', error, { itemId });
+        }
+      }, 15000);
+    }
+    
     // Verifica se é um evento de atualização de coluna e se a coluna é 'produto'
     if (event && event.type === 'change_column_value' && event.columnId === 'produto') {
       const itemId = event.pulseId;
@@ -30,10 +47,92 @@ app.post('/webhook/monday', async (req, res) => {
   }
 });
 
+// Endpoint para testar processamento de item específico
+app.post('/test-item/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    logger.info(`Teste manual solicitado para item ${itemId}`);
+    
+    await processarNovoItem(itemId);
+    
+    res.status(200).json({ 
+      sucesso: true, 
+      mensagem: `Item ${itemId} processado com sucesso` 
+    });
+  } catch (error) {
+    logErro('Teste manual de item', error);
+    res.status(500).json({ 
+      sucesso: false, 
+      erro: error.message 
+    });
+  }
+});
+
+// Endpoint para verificar status do webhook
+app.get('/webhook/status', (req, res) => {
+  res.status(200).json({
+    status: 'ativo',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      webhook: '/webhook/monday',
+      teste: '/test-item/:itemId'
+    }
+  });
+});
+
 // Inicia o servidor
 app.listen(PORT, () => {
   logger.info(`Servidor API iniciado na porta ${PORT}`);
+  logger.info(`Webhook Monday.com: http://localhost:${PORT}/webhook/monday`);
+  logger.info(`Status do webhook: http://localhost:${PORT}/webhook/status`);
+  logger.info(`Teste manual: http://localhost:${PORT}/test-item/:itemId`);
 });
+
+/**
+ * Processa um novo item criado no Monday.com
+ */
+async function processarNovoItem(itemId) {
+  try {
+    // Inicializa o cliente do Monday.com
+    const mondayClient = new MondayClient(config.monday.apiToken, config.monday.boardId);
+    
+    // Busca os detalhes do item
+    const item = await mondayClient.buscarItemPorId(itemId);
+    
+    logger.info(`Verificando novo item ${itemId}: Produto="${item?.produto}", Principal Produto="${item?.principalProduto}", Status="${item?.status}"`);
+    
+    // Verifica se o item tem produto BOT ou se ainda não foi preenchido
+    if (item && (item.produto === 'BOT' || !item.produto)) {
+      // Se o produto ainda não foi definido, agenda uma nova verificação em 30 segundos
+      if (!item.produto) {
+        logger.info(`Item ${itemId} ainda não tem produto definido. Reagendando verificação em 30 segundos.`);
+        setTimeout(async () => {
+          try {
+            await processarNovoItem(itemId);
+          } catch (error) {
+            logErro('Reprocessamento de novo item', error, { itemId });
+          }
+        }, 30000);
+        return;
+      }
+      
+      // Se o produto é BOT, processa imediatamente
+      if (item.produto === 'BOT') {
+        logger.info(`Novo item ${itemId} com produto BOT detectado`);
+        
+        // Aguarda 10 segundos adicionais para garantir que todos os campos estejam preenchidos
+        logger.info('Aguardando 10 segundos adicionais para garantir preenchimento completo...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
+        await processarFarmaciaBOT(item, mondayClient);
+      }
+    } else {
+      logger.info(`Item ${itemId} não é BOT (produto: "${item?.produto}"). Ignorando.`);
+    }
+  } catch (error) {
+    logErro('Processamento de novo item', error, { itemId });
+  }
+}
 
 /**
  * Processa um item específico que teve o produto BOT atualizado

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  monday-webhook:
+    build: .
+    container_name: monday-webhook-prod
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    environment:
+      - NODE_ENV=production
+      - PORT=10000
+    env_file:
+      - .env.production
+    volumes:
+      - ./logs:/app/logs
+      - /tmp:/tmp
+    networks:
+      - monday-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:10000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+networks:
+  monday-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

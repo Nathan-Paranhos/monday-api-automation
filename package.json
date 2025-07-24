@@ -9,12 +9,29 @@
   },
   "scripts": {
     "start": "node main.js",
+    "start:prod": "NODE_ENV=production node index.js",
+    "start:webhook": "NODE_ENV=production node index.js",
     "dev": "nodemon main.js",
     "test": "node teste-final.js",
     "test-webhook": "node teste-webhook-pulseId.js",
+    "test-detection": "node teste-deteccao-novos-itens.js",
     "build": "echo 'Build completed'",
     "bot": "node index.js",
-    "teste-bot": "node teste-bot.js"
+    "teste-bot": "node teste-bot.js",
+    "deploy": "npm run build && npm run start:prod",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop monday-webhook-prod",
+    "pm2:restart": "pm2 restart monday-webhook-prod",
+    "pm2:logs": "pm2 logs monday-webhook-prod",
+    "pm2:monit": "pm2 monit",
+    "docker:build": "docker build -t monday-webhook .",
+    "docker:run": "docker run -d --name monday-webhook-prod -p 10000:10000 --env-file .env.production monday-webhook",
+    "docker:stop": "docker stop monday-webhook-prod && docker rm monday-webhook-prod",
+    "docker:logs": "docker logs -f monday-webhook-prod",
+    "compose:up": "docker-compose -f docker-compose.prod.yml up -d",
+    "compose:down": "docker-compose -f docker-compose.prod.yml down",
+    "compose:logs": "docker-compose -f docker-compose.prod.yml logs -f",
+    "health-check": "node -e \"require('http').get('http://localhost:10000/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\""
   },
   "dependencies": {
     "dotenv": "^16.3.1",
@@ -26,7 +43,8 @@
     "winston": "^3.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "pm2": "^5.3.0"
   },
   "keywords": [
     "monday",

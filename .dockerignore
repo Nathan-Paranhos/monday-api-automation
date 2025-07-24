@@ -1,0 +1,68 @@
+# Dependências
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs
+*.log
+
+# Arquivos de teste
+teste-*.js
+test-*.js
+*.test.js
+*.spec.js
+
+# Arquivos de desenvolvimento
+.env
+.env.local
+.env.development
+.env.test
+.env.example
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentação
+README.md
+DEPLOY.md
+*.md
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Coverage
+coverage
+.nyc_output
+
+# Build
+build
+dist
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Scripts de desenvolvimento
+start-production.sh
+start-production.ps1
+
+# Arquivos de backup
+*.bak
+*.backup
