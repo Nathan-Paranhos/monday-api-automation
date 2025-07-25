@@ -1,12 +1,27 @@
-# Monday API Automation
+# Monday.com API - Estrutura Organizada
 
 ## 📋 Descrição
 
-API para automatizar a criação de estrutura de pastas baseada em demandas do Monday.com. O sistema consulta informações de produtos no Monday.com e cria automaticamente a estrutura de pastas necessária para cada cliente.
+API RESTful moderna e organizada para automatizar processos baseados em demandas do Monday.com. O sistema oferece uma arquitetura modular com separação clara de responsabilidades, incluindo automação de estruturas de pastas, webhooks, monitoramento e integração completa com Monday.com.
 
 **🔗 Produção:** https://monday-api-automation.onrender.com  
 **📂 GitHub:** https://github.com/Nathan-Paranhos/monday-api-automation  
 **👨‍💻 Desenvolvido por:** Nathan Silva - Fagron Tech
+
+## 🏗️ Arquitetura
+
+A API foi completamente reestruturada seguindo as melhores práticas de desenvolvimento:
+
+```
+src/
+├── app.js              # Configuração principal da aplicação
+├── controllers/        # Lógica de controle das rotas
+├── middlewares/        # Middlewares customizados
+├── routes/            # Definição das rotas
+├── services/          # Lógica de negócio
+├── utils/             # Utilitários e helpers
+└── validators/        # Esquemas de validação
+```
 
 ## 🎯 Campo Elemento
 
@@ -23,23 +38,44 @@ Automatizar via RPA a criação de uma estrutura de pastas para extensão de sis
 
 ## 📋 Funcionalidades
 
-- ✅ Consulta automática ao Monday.com via GraphQL
+### 🔄 Automação
+- ✅ Processamento automático de demandas
 - ✅ Criação de estrutura de pastas baseada no produto
 - ✅ Cópia de arquivo modelo (.vsdx)
-- ✅ **Suporte a múltiplos responsáveis por produto** 🆕
-- ✅ **Tratamento tolerante de emails não encontrados** 🆕
-- ✅ Atualização automática de status no Monday.com
-- ✅ Adição de observações nos itens do Monday.com
-- ✅ Filtragem de itens por status "Na Fila" e produtos específicos
-- ✅ **Extração automática de código de cliente do nome do item** 🆕
-- ✅ **Sistema de webhook para processamento automático** 🆕
-- ✅ **Detecção de novos itens criados no Monday.com** 🆕
-- ✅ **Endpoints de teste e health check** 🆕
-- ✅ **Containerização com Docker** 🆕
-- ✅ **Configuração para PM2 em produção** 🆕
-- ✅ Sistema completo de logs com Winston
-- ✅ Tratamento robusto de erros
-- ✅ API RESTful com Express
+- ✅ Suporte a múltiplos responsáveis por produto
+- ✅ Processamento em lote (bulk automation)
+- ✅ Sistema de retry e cancelamento
+
+### 🌐 Monday.com Integration
+- ✅ Consulta automática via GraphQL
+- ✅ Atualização automática de status
+- ✅ Busca de produtos e farmácias
+- ✅ Gestão completa de itens
+- ✅ Estatísticas do board
+- ✅ Histórico de atividades
+
+### 🔗 Webhooks
+- ✅ Processamento de webhooks do Monday.com
+- ✅ Webhooks genéricos
+- ✅ Histórico e estatísticas
+- ✅ Reprocessamento de eventos
+- ✅ Sistema de filas
+
+### 🛡️ Segurança & Monitoramento
+- ✅ Rate limiting configurável
+- ✅ Validação robusta com Joi
+- ✅ Sanitização de entrada
+- ✅ Health checks completos
+- ✅ Métricas de performance
+- ✅ Sistema de logs estruturado
+
+### 🚀 Infraestrutura
+- ✅ Cache em memória com TTL
+- ✅ Containerização com Docker
+- ✅ Configuração para PM2
+- ✅ Documentação Swagger
+- ✅ Graceful shutdown
+- ✅ Tratamento de erros global
 
 ## 🚀 Instalação
 
@@ -145,15 +181,54 @@ Consulte [PRODUCTION-GUIDE.md](./PRODUCTION-GUIDE.md) para instruções detalhad
    npm run start:prod
    ```
 
-   Para executar apenas o webhook:
+   Para debug:
    ```bash
-   npm run start:webhook
+   npm run dev:debug
    ```
 
-   Para testar a detecção de novos itens:
-   ```bash
-   npm run test-detection
-   ```
+## 📚 Documentação da API
+
+Após iniciar o servidor, acesse:
+
+- **Swagger UI:** `http://localhost:3000/api-docs`
+- **Health Check:** `http://localhost:3000/health`
+- **Métricas:** `http://localhost:3000/health/metrics`
+
+### Principais Endpoints
+
+#### 🔄 Automação
+- `POST /api/automation/process` - Processar automação
+- `GET /api/automation` - Listar automações
+- `GET /api/automation/:id/status` - Status da automação
+- `POST /api/automation/:id/cancel` - Cancelar automação
+- `POST /api/automation/bulk` - Processamento em lote
+
+#### 🌐 Monday.com
+- `GET /api/monday/test` - Testar conexão
+- `GET /api/monday/products` - Consultar produtos
+- `GET /api/monday/pharmacies/search` - Buscar farmácias
+- `GET /api/monday/items` - Listar itens
+- `POST /api/monday/items` - Criar item
+- `PUT /api/monday/items/:id` - Atualizar item
+
+#### 🔗 Webhooks
+- `POST /api/webhooks/monday` - Webhook Monday.com
+- `POST /api/webhooks/generic` - Webhook genérico
+- `GET /api/webhooks/history` - Histórico
+- `GET /api/webhooks/stats` - Estatísticas
+- `POST /api/webhooks/:id/reprocess` - Reprocessar
+
+#### ⚙️ Configuração
+- `GET /api/config` - Configurações públicas
+- `GET /api/config/detailed` - Configurações detalhadas
+- `POST /api/config/validate` - Validar configurações
+- `GET /api/config/env` - Variáveis de ambiente
+
+#### 🏥 Health & Monitoring
+- `GET /health` - Health check básico
+- `GET /health/detailed` - Health check detalhado
+- `GET /health/metrics` - Métricas da aplicação
+- `GET /health/dependencies` - Status das dependências
 
 ## 🔄 Scripts de Produção
 

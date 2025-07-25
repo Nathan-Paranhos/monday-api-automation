@@ -24,11 +24,62 @@
     }
   ],
   "paths": {
-    "/health": {
+    "/": {
       "get": {
         "tags": ["Sistema"],
-        "summary": "Health Check",
-        "description": "Verifica se a API está funcionando corretamente",
+        "summary": "Root Endpoint",
+        "description": "Endpoint raiz da API",
+        "operationId": "root",
+        "responses": {
+          "200": {
+            "description": "Informações básicas da API",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {"type": "string"},
+                    "version": {"type": "string"},
+                    "timestamp": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "API Info",
+        "description": "Informações sobre a API",
+        "operationId": "info",
+        "responses": {
+          "200": {
+            "description": "Informações da API",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "version": {"type": "string"},
+                    "description": {"type": "string"},
+                    "timestamp": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Basic Health Check",
+        "description": "Verifica se a API está funcionando",
         "operationId": "healthCheck",
         "responses": {
           "200": {
@@ -37,11 +88,259 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
-                },
-                "example": {
-                  "status": "ok",
-                  "timestamp": "2024-01-15T10:30:00.000Z",
-                  "service": "monday-api-automation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/detailed": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Detailed Health Check",
+        "description": "Verifica detalhadamente o status da API",
+        "operationId": "detailedHealthCheck",
+        "responses": {
+          "200": {
+            "description": "Status detalhado da API",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "uptime": {"type": "number"},
+                    "memory": {"type": "object"},
+                    "dependencies": {"type": "object"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/automation/list": {
+      "get": {
+        "tags": ["Automação"],
+        "summary": "Listar Automações",
+        "description": "Lista todas as automações executadas",
+        "operationId": "listAutomations",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de automações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "automations": {"type": "array"},
+                    "total": {"type": "integer"},
+                    "page": {"type": "integer"},
+                    "limit": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/automation/process": {
+      "post": {
+        "tags": ["Automação"],
+        "summary": "Processar Automação",
+        "description": "Executa uma nova automação",
+        "operationId": "processAutomation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomacaoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Automação processada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomacaoSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monday/test": {
+      "get": {
+        "tags": ["Monday.com"],
+        "summary": "Testar Conexão Monday",
+        "description": "Verifica se a conexão com a API do Monday.com está funcionando",
+        "operationId": "testMondayConnection",
+        "responses": {
+          "200": {
+            "description": "Teste de conexão realizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MondayTestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monday/products/{clientId}": {
+      "get": {
+        "tags": ["Monday.com"],
+        "summary": "Consultar Produto por ID",
+        "description": "Busca o produto associado a um cliente específico no Monday.com",
+        "operationId": "queryProduct",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "required": true,
+            "description": "ID do cliente",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produto encontrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProdutoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook/monday": {
+      "post": {
+        "tags": ["Webhook"],
+        "summary": "Webhook Monday.com",
+        "description": "Recebe notificações do Monday.com",
+        "operationId": "mondayWebhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "challenge": {"type": "string"},
+                  "event": {"type": "object"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook processado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "challenge": {"type": "string"},
+                    "status": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook/history": {
+      "get": {
+        "tags": ["Webhook"],
+        "summary": "Histórico de Webhooks",
+        "description": "Recupera o histórico de webhooks processados",
+        "operationId": "webhookHistory",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Histórico de webhooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhooks": {"type": "array"},
+                    "total": {"type": "integer"},
+                    "page": {"type": "integer"},
+                    "limit": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": ["Configuração"],
+        "summary": "Obter Configurações",
+        "description": "Retorna as configurações públicas da aplicação",
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "description": "Configurações obtidas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigResponse"
                 }
               }
             }
@@ -52,7 +351,7 @@
     "/automatizar": {
       "post": {
         "tags": ["Automação"],
-        "summary": "Automação Principal",
+        "summary": "Automação Principal (Legacy)",
         "description": "Executa a automação completa: consulta Monday.com, cria estrutura de pastas e copia arquivo modelo",
         "operationId": "executarAutomacao",
         "requestBody": {
@@ -823,11 +1122,15 @@
   "tags": [
     {
       "name": "Sistema",
-      "description": "Endpoints relacionados ao sistema e configurações"
+      "description": "Endpoints básicos do sistema"
+    },
+    {
+      "name": "Health",
+      "description": "Endpoints de monitoramento e saúde da API"
     },
     {
       "name": "Automação",
-      "description": "Endpoints para execução da automação principal"
+      "description": "Endpoints para execução e gerenciamento de automações"
     },
     {
       "name": "Monday.com",
@@ -835,7 +1138,11 @@
     },
     {
       "name": "Webhook",
-      "description": "Endpoints para receber notificações automáticas"
+      "description": "Endpoints para receber e gerenciar webhooks"
+    },
+    {
+      "name": "Configuração",
+      "description": "Endpoints para gerenciamento de configurações"
     }
   ]
 }
