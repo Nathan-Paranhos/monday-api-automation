@@ -1,7 +1,8 @@
 const express = require('express');
-const WebhookController = require('../controllers/webhookController');
-const { validateMondayWebhook, validateContentType } = require('../middlewares/validation');
-const { asyncErrorHandler } = require('../middlewares/errorHandler');
+const WebhookController = require('../../controllers/webhookController');
+const { validateMondayWebhook, validateContentType } = require('../../middlewares/validation');
+const { verifyMondaySignature } = require('../../middlewares/security');
+const { asyncErrorHandler } = require('../../middlewares/errorHandler');
 const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
@@ -90,6 +91,7 @@ router.use(webhookRateLimit);
  */
 router.post('/monday', 
   validateContentType,
+  verifyMondaySignature,
   validateMondayWebhook,
   asyncErrorHandler(async (req, res) => {
     const result = await webhookController.processMondayWebhook(req, res);

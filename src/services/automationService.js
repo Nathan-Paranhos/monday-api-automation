@@ -1,5 +1,5 @@
-const { logger } = require('../../logs/logger');
-const MondayClient = require('../../monday/mondayClient');
+const logger = require('../../logs/logger');
+const MondayService = require('./mondayService');
 const FileManager = require('../../fileManager/fileManager');
 const { AppError } = require('../middlewares/errorHandler');
 
@@ -9,7 +9,7 @@ const { AppError } = require('../middlewares/errorHandler');
  */
 class AutomationService {
   constructor() {
-    this.mondayClient = new MondayClient();
+    this.mondayService = new MondayService();
     this.fileManager = new FileManager();
     this.automationHistory = new Map(); // Cache em memória para histórico
   }
@@ -39,20 +39,20 @@ class AutomationService {
         steps: []
       });
 
-      // Passo 1: Consultar produto no Monday.com
-      this.updateAutomationStep(automationId, 'consultando_produto', 'em_progresso');
-      const produtoInfo = await this.mondayClient.consultarProduto(clienteId);
+      // Passo 1: Consultar informações do cliente no Monday.com
+      this.updateAutomationStep(automationId, 'consultando_cliente', 'em_progresso');
+      const clienteInfo = await this.mondayService.getClientInfo(clienteId);
       
-      if (!produtoInfo) {
-        this.updateAutomationStep(automationId, 'consultando_produto', 'falha', 'Produto não encontrado');
-        throw new AppError(`Produto com ID ${clienteId} não encontrado`, 404, 'PRODUCT_NOT_FOUND');
+      if (!clienteInfo) {
+        this.updateAutomationStep(automationId, 'consultando_cliente', 'falha', 'Cliente não encontrado');
+        throw new AppError(`Cliente com ID ${clienteId} não encontrado`, 404, 'CLIENT_NOT_FOUND');
       }
       
-      this.updateAutomationStep(automationId, 'consultando_produto', 'sucesso', produtoInfo);
+      this.updateAutomationStep(automationId, 'consultando_cliente', 'sucesso', clienteInfo);
 
       // Passo 2: Determinar responsável
       this.updateAutomationStep(automationId, 'determinando_responsavel', 'em_progresso');
-      const responsavelFinal = this.determineResponsible(responsavel, produtoInfo.responsavel);
+      const responsavelFinal = this.determineResponsible(responsavel, clienteInfo.analista_responsavel);
       this.updateAutomationStep(automationId, 'determinando_responsavel', 'sucesso', { responsavel: responsavelFinal });
 
       // Passo 3: Criar estrutura de pastas
@@ -64,14 +64,15 @@ class AutomationService {
       });
       this.updateAutomationStep(automationId, 'criando_estrutura', 'sucesso', estruturaPastas);
 
-      // Passo 4: Atualizar Monday.com
-      this.updateAutomationStep(automationId, 'atualizando_monday', 'em_progresso');
-      const updateResult = await this.mondayClient.atualizarItem(produtoInfo.id, {
-        status: 'Em Processamento',
+      // Passo 4: Processar automação no Monday.com
+      this.updateAutomationStep(automationId, 'processando_monday', 'em_progresso');
+      const processResult = await this.mondayService.processAutomation({
+        clienteId,
+        produto,
         responsavel: responsavelFinal,
         estruturaPastas: estruturaPastas.caminho
       });
-      this.updateAutomationStep(automationId, 'atualizando_monday', 'sucesso', updateResult);
+      this.updateAutomationStep(automationId, 'processando_monday', 'sucesso', processResult);
 
       // Finalizar automação
       const automation = this.automationHistory.get(automationId);
@@ -79,10 +80,10 @@ class AutomationService {
       automation.endTime = new Date();
       automation.duration = automation.endTime - automation.startTime;
       automation.result = {
-        produtoInfo,
+        clienteInfo,
         responsavel: responsavelFinal,
         estruturaPastas,
-        updateResult
+        processResult
       };
 
       logger.info('Automação processada com sucesso', {
@@ -175,86 +176,110 @@ class AutomationService {
 
   /**
    * Obtém status de uma automação
+   * @param {string} automationId - ID da automação
+   * @returns {Promise<Object>} Status da automação
    */
   async getStatus(automationId) {
-    const automation = this.automationHistory.get(automationId);
-    
-    if (!automation) {
-      return null;
-    }
+    try {
+      const automation = this.automationHistory.get(automationId);
+      
+      if (!automation) {
+        return null;
+      }
 
-    return {
-      id: automationId,
-      status: automation.status,
-      startTime: automation.startTime,
-      endTime: automation.endTime,
-      duration: automation.duration,
-      steps: automation.steps,
-      result: automation.result,
-      error: automation.error
-    };
+      return {
+        id: automationId,
+        status: automation.status,
+        progress: automation.progress || 0,
+        startTime: automation.startTime,
+        endTime: automation.endTime,
+        duration: automation.duration,
+        steps: automation.steps,
+        result: automation.result,
+        error: automation.error
+      };
+    } catch (error) {
+      logger.error('Erro ao obter status da automação:', error);
+      throw error;
+    }
   }
 
   /**
    * Lista automações com filtros
+   * @param {Object} filters - Filtros de busca
+   * @returns {Promise<Object>} Lista de automações
    */
   async list(filters = {}) {
-    const { page = 1, limit = 10, status, responsavel } = filters;
-    
-    let automations = Array.from(this.automationHistory.values());
-    
-    // Aplicar filtros
-    if (status) {
-      automations = automations.filter(auto => auto.status === status);
+    try {
+      const { page = 1, limit = 10, status, responsavel } = filters;
+      
+      let automations = Array.from(this.automationHistory.values());
+      
+      // Aplicar filtros
+      if (status) {
+        automations = automations.filter(auto => auto.status === status);
+      }
+      
+      if (responsavel) {
+        automations = automations.filter(auto => auto.responsavel === responsavel);
+      }
+      
+      // Ordenar por data (mais recentes primeiro)
+      automations.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      
+      // Paginação
+      const total = automations.length;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedAutomations = automations.slice(startIndex, endIndex);
+      
+      return {
+        automations: paginatedAutomations,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      logger.error('Erro ao listar automações:', error);
+      throw error;
     }
-    
-    if (responsavel) {
-      automations = automations.filter(auto => auto.responsavel === responsavel);
-    }
-    
-    // Ordenar por data (mais recentes primeiro)
-    automations.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-    
-    // Paginação
-    const total = automations.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedAutomations = automations.slice(startIndex, endIndex);
-    
-    return {
-      automations: paginatedAutomations,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    };
   }
 
   /**
    * Cancela uma automação
+   * @param {string} automationId - ID da automação
+   * @returns {Promise<Object>} Resultado do cancelamento
    */
   async cancel(automationId) {
-    const automation = this.automationHistory.get(automationId);
-    
-    if (!automation) {
-      return null;
+    try {
+      const automation = this.automationHistory.get(automationId);
+      
+      if (!automation) {
+        return null;
+      }
+      
+      if (automation.status === 'concluida' || automation.status === 'falha') {
+        throw new AppError('Não é possível cancelar automação já finalizada', 400, 'AUTOMATION_ALREADY_FINISHED');
+      }
+      
+      automation.status = 'cancelada';
+      automation.endTime = new Date();
+      automation.duration = automation.endTime - automation.startTime;
+      
+      logger.info('Automação cancelada', { automationId });
+      
+      return {
+        id: automationId,
+        status: 'cancelada',
+        canceledAt: automation.endTime
+      };
+    } catch (error) {
+      logger.error('Erro ao cancelar automação:', error);
+      throw error;
     }
-    
-    if (automation.status === 'concluida' || automation.status === 'falha') {
-      throw new AppError('Não é possível cancelar automação já finalizada', 400, 'AUTOMATION_ALREADY_FINISHED');
-    }
-    
-    automation.status = 'cancelada';
-    automation.endTime = new Date();
-    automation.duration = automation.endTime - automation.startTime;
-    
-    logger.info('Automação cancelada', { automationId });
-    
-    return {
-      id: automationId,
-      status: 'cancelada',
-      canceledAt: automation.endTime
-    };
   }
 
   /**

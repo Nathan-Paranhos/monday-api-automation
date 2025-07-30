@@ -6,7 +6,7 @@ API RESTful moderna e organizada para automatizar processos baseados em demandas
 
 **🔗 Produção:** https://monday-api-automation.onrender.com  
 **📂 GitHub:** https://github.com/Nathan-Paranhos/monday-api-automation  
-**👨‍💻 Desenvolvido por:** Nathan Silva - Fagron Tech
+**👨‍💻 Desenvolvido por:** Equipe Fagron Tech
 
 ## 🏗️ Arquitetura
 
@@ -638,7 +638,6 @@ curl http://localhost:3000/produto/12345
 ### 🆕 Webhook não funciona
 - Verifique se a URL do webhook está correta no Monday.com
 - Confirme se o servidor está acessível externamente
-- Teste com `ngrok` para desenvolvimento local
 
 ### 🆕 Extração de código de cliente falha
 - Verifique se o nome do item contém números
@@ -669,7 +668,7 @@ curl http://localhost:3000/produto/12345
 - `index.js` - Endpoint de webhook adicionado
 - `README.md` - Documentação completa atualizada
 
-### v1.0.0 - Junho 2024
+### v1.0.0 - Junho 2025
 
 **Funcionalidades Iniciais:**
 - ✅ Consulta automática ao Monday.com
@@ -688,8 +687,6 @@ Para suporte técnico:
 
 **Equipe de desenvolvimento:**
 - **Nathan Silva**: Nathan.silva@fagrontech.com.br
-- **Pedro Ribeiro**: Pedro.Ribeiro@fagrontech.com.br
-- **Bruno Vaz**: Bruno.Vaz@fagrontech.com.br
 - **Jean Vencigueri**: Jean.Vencigueri@fagrontech.com.br
 
 ## 📝 Licença
@@ -698,6 +695,6 @@ ISC License - Fagron Tech
 
 ---
 
-**Última atualização**: Janeiro 2024  
+**Última atualização**: Julho 2025
 **Versão**: 2.0.0  
 **Desenvolvido por**: Equipe Fagron Tech

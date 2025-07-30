@@ -4,6 +4,7 @@ const swaggerDocument = require('./swagger.json');
 const config = require('./config/config');
 const MondayClient = require('./monday/mondayClient');
 const FileManager = require('./fileManager/fileManager');
+const MonitoringService = require('./monday/src/services/monitoringService');
 const { logInicioProcessamento, logSucesso, logErro, logValidacao } = require('./logs/logger');
 
 /**
@@ -21,6 +22,7 @@ class MondayAutomationAPI {
     this.app = express();
     this.mondayClient = new MondayClient();
     this.fileManager = new FileManager();
+    this.monitoringService = new MonitoringService();
     
     this.configurarMiddlewares();
     this.configurarRotas();
@@ -100,6 +102,13 @@ class MondayAutomationAPI {
     
     // Rota do webhook do Monday.com
     this.app.post('/webhook/monday', this.processarWebhookMonday.bind(this));
+    
+    // Rotas do serviço de monitoramento 24h
+    this.app.post('/monitoring/start', this.iniciarMonitoramento.bind(this));
+    this.app.post('/monitoring/stop', this.pararMonitoramento.bind(this));
+    this.app.get('/monitoring/status', this.statusMonitoramento.bind(this));
+    this.app.post('/monitoring/clear-cache', this.limparCacheMonitoramento.bind(this));
+    this.app.post('/monitoring/interval', this.configurarIntervaloMonitoramento.bind(this));
   }
 
   /**
@@ -393,6 +402,141 @@ class MondayAutomationAPI {
   }
 
   /**
+   * Inicia o serviço de monitoramento 24h
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  async iniciarMonitoramento(req, res) {
+    try {
+      await this.monitoringService.startMonitoring();
+      res.json({
+        status: 'ok',
+        message: 'Serviço de monitoramento iniciado com sucesso',
+        monitoring: this.monitoringService.getStatus(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logErro('Iniciar monitoramento', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: error.message,
+        codigo: 'ERRO_MONITORAMENTO',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Para o serviço de monitoramento 24h
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  pararMonitoramento(req, res) {
+    try {
+      this.monitoringService.stopMonitoring();
+      res.json({
+        status: 'ok',
+        message: 'Serviço de monitoramento parado com sucesso',
+        monitoring: this.monitoringService.getStatus(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logErro('Parar monitoramento', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: error.message,
+        codigo: 'ERRO_MONITORAMENTO',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Retorna o status do serviço de monitoramento
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  statusMonitoramento(req, res) {
+    try {
+      const status = this.monitoringService.getStatus();
+      res.json({
+        status: 'ok',
+        monitoring: status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logErro('Status monitoramento', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: error.message,
+        codigo: 'ERRO_MONITORAMENTO',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Limpa o cache de itens processados
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  limparCacheMonitoramento(req, res) {
+    try {
+      this.monitoringService.clearProcessedCache();
+      res.json({
+        status: 'ok',
+        message: 'Cache de monitoramento limpo com sucesso',
+        monitoring: this.monitoringService.getStatus(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logErro('Limpar cache monitoramento', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: error.message,
+        codigo: 'ERRO_MONITORAMENTO',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Configura o intervalo de monitoramento
+   * @param {Request} req - Requisição Express
+   * @param {Response} res - Resposta Express
+   */
+  configurarIntervaloMonitoramento(req, res) {
+    try {
+      const { intervalMs } = req.body;
+      
+      if (!intervalMs || typeof intervalMs !== 'number') {
+        return res.status(400).json({
+          status: 'erro',
+          erro: 'Campo "intervalMs" é obrigatório e deve ser um número',
+          codigo: 'DADOS_INVALIDOS',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      this.monitoringService.setMonitoringInterval(intervalMs);
+      res.json({
+        status: 'ok',
+        message: `Intervalo de monitoramento configurado para ${intervalMs / 1000} segundos`,
+        monitoring: this.monitoringService.getStatus(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logErro('Configurar intervalo monitoramento', error);
+      res.status(500).json({
+        status: 'erro',
+        erro: error.message,
+        codigo: 'ERRO_MONITORAMENTO',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
    * Retorna configurações da aplicação (sem dados sensíveis)
    * @param {Request} req - Requisição Express
    * @param {Response} res - Resposta Express
@@ -467,10 +611,10 @@ class MondayAutomationAPI {
   /**
    * Inicia o servidor
    */
-  iniciar() {
+  async iniciar() {
     const porta = config.server.port;
     
-    this.app.listen(porta, () => {
+    this.app.listen(porta, async () => {
       console.log(`🚀 Servidor Monday API Automation rodando em http://localhost:${porta}`);
       console.log(`👨‍💻 Desenvolvido por: Nathan Silva - Fagron Tech`);
       console.log(`📋 Rotas disponíveis:`);
@@ -481,8 +625,24 @@ class MondayAutomationAPI {
       console.log(`   🔗 GET  /test-monday - Teste de conexão Monday`);
       console.log(`   🔍 GET  /produto/:id - Consultar produto por ID`);
       console.log(`   ⚙️  GET  /config - Configurações da aplicação`);
+      console.log(`   🤖 POST /monitoring/start - Iniciar monitoramento 24h`);
+      console.log(`   ⏹️  POST /monitoring/stop - Parar monitoramento`);
+      console.log(`   📊 GET  /monitoring/status - Status do monitoramento`);
+      console.log(`   🗑️  POST /monitoring/clear-cache - Limpar cache`);
+      console.log(`   ⏱️  POST /monitoring/interval - Configurar intervalo`);
       console.log(`⏰ ${new Date().toISOString()}`);
       console.log(`📖 Acesse a documentação em: http://localhost:${porta}/api-docs`);
+      
+      // Inicia automaticamente o serviço de monitoramento 24h
+      try {
+        console.log(`🤖 Iniciando serviço de monitoramento automático...`);
+        await this.monitoringService.startMonitoring();
+        console.log(`✅ Serviço de monitoramento 24h iniciado com sucesso!`);
+        console.log(`🔍 Monitorando produtos BOT automaticamente a cada 30 segundos`);
+      } catch (error) {
+        console.error(`❌ Erro ao iniciar serviço de monitoramento:`, error.message);
+        console.log(`⚠️  O serviço pode ser iniciado manualmente via POST /monitoring/start`);
+      }
     });
   }
 }
@@ -512,16 +672,18 @@ function validarVariaveisAmbiente() {
 
 // Inicialização da aplicação
 if (require.main === module) {
-  try {
-    // Valida variáveis de ambiente antes de inicializar
-    validarVariaveisAmbiente();
-    
-    const api = new MondayAutomationAPI();
-    api.iniciar();
-  } catch (error) {
-    console.error('❌ Erro ao inicializar a aplicação:', error.message);
-    process.exit(1);
-  }
+  (async () => {
+    try {
+      // Valida variáveis de ambiente antes de inicializar
+      validarVariaveisAmbiente();
+      
+      const api = new MondayAutomationAPI();
+      await api.iniciar();
+    } catch (error) {
+      console.error('❌ Erro ao inicializar a aplicação:', error.message);
+      process.exit(1);
+    }
+  })();
 }
 
 module.exports = MondayAutomationAPI;

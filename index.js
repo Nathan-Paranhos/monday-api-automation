@@ -258,39 +258,32 @@ async function main() {
     
     logger.info(`Filtradas ${farmaciasFiltradas.length} farmácias com status "Na Fila" e produto principal "Fórmula Certa" ou "Phusion"`);
     
-    // Processa cada farmácia
     for (const farmacia of farmaciasFiltradas) {
       try {
         logger.info(`Processando farmácia: ${farmacia.elemento} (ID: ${farmacia.id})`);
         
-        // Extrai o código do cliente - prioriza campo específico, depois nome, depois ID
         let codigoCliente = farmacia.campos?.codigoCliente;
         
         if (!codigoCliente) {
-          // Tenta extrair do nome usando regex (formato: "1234 - Nome da Farmácia")
           const nomeMatch = farmacia.elemento.match(/^(\d+)\s*-\s*(.+)$/);
           codigoCliente = nomeMatch ? nomeMatch[1] : farmacia.id;
         }
         
-        // Determina o responsável com base no produto principal
         const emailResponsavel = config.obterResponsavel(farmacia.principalProduto);
         if (!emailResponsavel) {
           logErro('Processamento de farmácia', new Error(`Não foi possível determinar o responsável para o produto ${farmacia.principalProduto}`), { farmacia });
           continue;
         }
         
-        // Cria a estrutura de pastas e copia o arquivo modelo
         const resultado = await fileManager.processarCliente(farmacia.principalProduto, codigoCliente);
         
         if (resultado.sucesso) {
-          // Atualiza o item no Monday.com
+     
           await mondayClient.atribuirResponsavel(farmacia.id, emailResponsavel);
           
-          // Adiciona observação
-          const observacao = "🗂️ Pasta criada automaticamente e modelo de fluxo copiado com base no status 'Na Fila'.";
+          const observacao = "🗂️ Pasta criada automaticamente e modelo de fluxo copiado com base no status 'Na Fila'. #Teste 2.0 Nathan";
           await mondayClient.adicionarObservacao(farmacia.id, observacao);
           
-          // Atualiza o status para "Configuração"
           await mondayClient.atualizarStatus(farmacia.id, "Em andamento");
           
           logSucesso({ operacao: 'Processamento de farmácia', resultado: `Farmácia ${farmacia.elemento} (ID: ${farmacia.id}) processada com sucesso` });

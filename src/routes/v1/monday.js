@@ -1,7 +1,7 @@
 const express = require('express');
-const MondayController = require('../controllers/mondayController');
-const { validateQueryParams, validateContentType } = require('../middlewares/validation');
-const { asyncErrorHandler } = require('../middlewares/errorHandler');
+const MondayController = require('../../controllers/mondayController');
+const { validateQueryParams, validateContentType } = require('../../middlewares/validation');
+const { asyncErrorHandler } = require('../../middlewares/errorHandler');
 const rateLimit = require('express-rate-limit');
 
 const router = express.Router();

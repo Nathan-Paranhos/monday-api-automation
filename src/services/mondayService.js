@@ -1,5 +1,6 @@
-const { logger } = require('../../logs/logger');
-const MondayClient = require('../../monday/mondayClient');
+const { GraphQLClient } = require('graphql-request');
+const crypto = require('crypto');
+const logger = require('../../logs/logger');
 const { AppError } = require('../middlewares/errorHandler');
 
 /**
@@ -8,7 +9,12 @@ const { AppError } = require('../middlewares/errorHandler');
  */
 class MondayService {
   constructor() {
-    this.mondayClient = new MondayClient();
+    this.client = new GraphQLClient('https://api.monday.com/v2', {
+      headers: {
+        'Authorization': process.env.MONDAY_API_TOKEN,
+        'API-Version': '2023-10'
+      }
+    });
     this.cache = new Map(); // Cache simples para consultas frequentes
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
   }
@@ -16,139 +22,161 @@ class MondayService {
   /**
    * Testa conexão com Monday.com
    */
-  async testarConexao() {
+  async testConnection() {
     try {
       logger.info('Testando conexão com Monday.com');
       
-      const result = await this.mondayClient.testarConexao();
+      const query = `
+        query {
+          me {
+            id
+            name
+            email
+          }
+        }
+      `;
+      
+      const result = await this.client.request(query);
       
       logger.info('Conexão com Monday.com estabelecida com sucesso', {
-        usuario: result.usuario,
-        workspace: result.workspace
+        user: result.me
       });
       
-      return result;
+      return {
+        success: true,
+        user: result.me,
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
       logger.error('Falha na conexão com Monday.com', {
         error: error.message,
         stack: error.stack
       });
-      throw new AppError('Falha na conexão com Monday.com', 502, 'MONDAY_CONNECTION_ERROR');
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
   /**
-   * Consulta produto por ID do cliente
+   * Obtém informações do cliente por ID
    */
-  async consultarProduto(clienteId) {
-    const cacheKey = `produto_${clienteId}`;
-    
-    // Verificar cache
+  async getClientInfo(clienteId) {
+    const cacheKey = `cliente_info_${clienteId}`;
     const cached = this.getFromCache(cacheKey);
     if (cached) {
-      logger.info('Produto obtido do cache', { clienteId });
+      logger.info('Informações do cliente obtidas do cache', { clienteId });
       return cached;
     }
 
     try {
-      logger.info('Consultando produto no Monday.com', { clienteId });
+      logger.info('Buscando informações do cliente no Monday.com', { clienteId });
       
-      const produto = await this.mondayClient.consultarProduto(clienteId);
+      const query = `
+        query($itemId: ID!) {
+          items(ids: [$itemId]) {
+            id
+            name
+            column_values {
+              id
+              text
+              value
+            }
+          }
+        }
+      `;
       
-      if (produto) {
-        // Normalizar dados do produto
-        const normalizedProduct = this.normalizeProductData(produto);
-        
-        // Armazenar no cache
-        this.setCache(cacheKey, normalizedProduct);
-        
-        logger.info('Produto encontrado e normalizado', {
-          clienteId,
-          produtoId: normalizedProduct.id,
-          nome: normalizedProduct.nome
-        });
-        
-        return normalizedProduct;
+      const result = await this.client.request(query, { itemId: clienteId });
+      
+      if (!result.items || result.items.length === 0) {
+        throw new Error('Cliente não encontrado');
       }
       
-      logger.warn('Produto não encontrado', { clienteId });
-      return null;
+      const item = result.items[0];
       
+      // Extrair nome do cliente do título do item
+      const nomeCompleto = item.name || '';
+      const nome = nomeCompleto.replace(/^Demanda\s*-\s*/i, '').trim();
+      
+      // Buscar valores das colunas
+      const getColumnValue = (columnId) => {
+        const column = item.column_values.find(c => c.id === columnId);
+        return column?.text || 'N/A';
+      };
+      
+      const clientInfo = {
+        nome,
+        codigo: getColumnValue('text') || getColumnValue('codigo'),
+        data_solicitacao: getColumnValue('date4') || getColumnValue('data_solicitacao'),
+        analista_responsavel: getColumnValue('person') || getColumnValue('analista_responsavel')
+      };
+
+      this.setCache(cacheKey, clientInfo);
+      logger.info('Informações do cliente recuperadas e cacheadas', { clienteId, clientInfo });
+
+      return clientInfo;
     } catch (error) {
-      logger.error('Erro ao consultar produto', {
+      logger.error('Erro ao buscar informações do cliente no Monday.com', {
         clienteId,
-        error: error.message
+        error: error.message,
       });
-      throw new AppError('Erro ao consultar produto no Monday.com', 500, 'PRODUCT_QUERY_ERROR');
+      throw new Error(error.message);
     }
   }
 
   /**
-   * Busca farmácias BOT
+   * Processa automação
    */
-  async buscarFarmaciasBOT(filters = {}) {
-    const { status, produto, limit = 50 } = filters;
-    
+  async processAutomation(data) {
     try {
-      logger.info('Buscando farmácias BOT', { filters });
+      logger.info('Processando automação', { data });
       
-      const farmacias = await this.mondayClient.buscarFarmaciasBOT({
-        status,
-        produto,
-        limit
-      });
+      // Simular processamento de automação
+      const result = {
+        id: Date.now().toString(),
+        status: 'processing',
+        data,
+        timestamp: new Date().toISOString()
+      };
       
-      // Normalizar dados das farmácias
-      const normalizedFarmacias = farmacias.map(farmacia => this.normalizePharmacyData(farmacia));
-      
-      logger.info('Farmácias BOT encontradas', {
-        total: normalizedFarmacias.length,
-        filters
-      });
-      
-      return normalizedFarmacias;
-      
-    } catch (error) {
-      logger.error('Erro ao buscar farmácias BOT', {
-        filters,
-        error: error.message
-      });
-      throw new AppError('Erro ao buscar farmácias BOT', 500, 'PHARMACIES_QUERY_ERROR');
-    }
-  }
-
-  /**
-   * Atualiza item no Monday.com
-   */
-  async atualizarItem(itemId, updateData) {
-    try {
-      logger.info('Atualizando item no Monday.com', {
-        itemId,
-        updateData
-      });
-      
-      // Preparar dados para atualização
-      const preparedData = this.prepareUpdateData(updateData);
-      
-      const result = await this.mondayClient.atualizarItem(itemId, preparedData);
-      
-      // Invalidar cache relacionado
-      this.invalidateRelatedCache(itemId);
-      
-      logger.info('Item atualizado com sucesso', {
-        itemId,
-        result
-      });
-      
+      logger.info('Automação processada com sucesso', { result });
       return result;
-      
     } catch (error) {
-      logger.error('Erro ao atualizar item', {
-        itemId,
-        updateData,
+      logger.error('Erro ao processar automação', {
+        error: error.message,
+        data
+      });
+      throw new AppError('Erro ao processar automação', 500, 'AUTOMATION_PROCESS_ERROR');
+    }
+  }
+
+  /**
+   * Valida assinatura do webhook
+   */
+  validateWebhookSignature(payload, signature, secret) {
+    try {
+      const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(payload)
+        .digest('hex');
+      
+      const expectedSignatureWithPrefix = `sha256=${expectedSignature}`;
+      const isValid = signature === expectedSignatureWithPrefix;
+      
+      logger.info('Validação de assinatura do webhook', {
+        isValid,
+        receivedSignature: signature.substring(0, 10) + '...',
+        expectedSignature: expectedSignatureWithPrefix.substring(0, 10) + '...'
+      });
+      
+      return isValid;
+    } catch (error) {
+      logger.error('Erro ao validar assinatura do webhook', {
         error: error.message
       });
-      throw new AppError('Erro ao atualizar item no Monday.com', 500, 'ITEM_UPDATE_ERROR');
+      return false;
     }
   }
 

@@ -16,7 +16,9 @@ const config = {
   monday: {
     apiToken: process.env.MONDAY_API_TOKEN,
     boardId: process.env.MONDAY_BOARD_ID,
-    apiUrl: 'https://api.monday.com/v2'
+    apiUrl: 'https://api.monday.com/v2',
+    // ATENÇÃO: Substitua pelo ID do usuário que será o responsável BOT
+    botUserId: 12345678 // Substitua pelo ID de usuário numérico correto
   },
 
   // Configurações do servidor
@@ -71,26 +73,30 @@ const config = {
     'Inadimplente': 'inadimplente'
   },
 
-  // Produtos válidos
+  // Produtos de referencias para criação de pastas 
   produtosValidos: ['BOT', 'Fórmula Certa', 'Phusion'],
+
+  // ATENÇÃO: Substitua os valores 'id_da_coluna' pelos IDs reais das colunas do seu board no Monday.com
+  colunasIds: {
+    status: 'status', // Ex: 'status_1'
+    produto: 'connect_boards', // Ex: 'connect_boards_1'
+    principalProduto: 'connect_boards2', // Ex: 'connect_boards_2'
+    responsavel: 'person', // Ex: 'person_1'
+    codigoCliente: 'text', // Ex: 'text_1'
+    // Adicione outros IDs de coluna conforme necessário
+  },
   
-  // Configuração para campos adicionais identificados nas imagens
+  // Mapeamento de propriedades para IDs de colunas do Monday.com
+  // Isso torna o código mais robusto, pois IDs não mudam, mas títulos de colunas podem mudar.
   camposMonday: {
-    elemento: ['name', 'elemento'],
-    responsavel: ['responsavel', 'responsável'],
-    acompanhamento: ['acompanhamento'],
-    proximoContato: ['proximo contato', 'próximo contato'],
-    esforcoReal: ['esforco real', 'esforço real'],
-    goLive: ['go live'],
-    case: ['case'],
-    dataSolicitacao: ['data solicitacao', 'data solicitação'],
-    cronograma: ['cronograma'],
-    etapas: ['etapas'],
-    status: ['status'],
-    produto: ['produto'],
-    tipoPix: ['tipo pix', 'tipo Pix'],
-    principalProduto: ['principal produto'],
-    codigoCliente: ['codigo cliente', 'código cliente', 'id cliente', 'cliente id']
+    elemento: 'name',
+    responsavel: 'person', // Substitua pelo ID da coluna de responsável
+    status: 'status', // Substitua pelo ID da coluna de status
+    produto: 'connect_boards', // Substitua pelo ID da coluna de produto
+    principalProduto: 'connect_boards2', // Substitua pelo ID da coluna de produto principal
+    codigoCliente: 'text' // Substitua pelo ID da coluna de código do cliente
+    // Adicione outros campos aqui, mapeando um nome lógico para o ID da coluna
+    // Ex: dataSolicitacao: 'date_1'
   },
 
   /**
@@ -133,22 +139,15 @@ const config = {
   isProdutoValido(produto) {
     if (!produto) return false;
     
-    // Verifica se o produto está na lista de produtos válidos
     if (this.produtosValidos.includes(produto)) return true;
     
-    // Verifica se o produto está no mapeamento de paths
     if (this.paths.products[produto]) return true;
-    
-    // Normaliza o produto (remove acentos e converte para minúsculo) para comparação
     const produtoNormalizado = produto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    
-    // Verifica se algum produto válido corresponde após normalização
     for (const validProduto of this.produtosValidos) {
       const validProdutoNormalizado = validProduto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       if (validProdutoNormalizado === produtoNormalizado) return true;
     }
     
-    // Verifica se alguma chave no mapeamento de paths corresponde após normalização
     for (const key of Object.keys(this.paths.products)) {
       const keyNormalizado = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       if (keyNormalizado === produtoNormalizado) return true;
@@ -165,11 +164,9 @@ const config = {
   normalizarStatus(status) {
     if (!status) return null;
     
-    // Verifica se existe no mapeamento
     const statusNormalizado = this.statusMapping[status];
     if (statusNormalizado) return statusNormalizado;
     
-    // Remove acentos e converte para minúsculo para melhorar compatibilidade
     const statusSemAcento = status.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     
     // Verifica se existe no mapeamento após normalização

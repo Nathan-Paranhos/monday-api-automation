@@ -12,11 +12,11 @@
     "start:prod": "NODE_ENV=production node server.js",
     "dev": "nodemon server.js",
     "dev:debug": "nodemon --inspect server.js",
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "echo 'Unit tests not implemented yet'",
-    "test:integration": "echo 'Integration tests not implemented yet'",
-    "test:webhook": "node tests/webhook-test.js",
-    "test:automation": "node tests/automation-test.js",
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "echo 'Linting not configured yet'",
     "lint:fix": "echo 'Linting not configured yet'",
     "build": "echo 'Build completed - API ready for production'",
@@ -50,7 +50,9 @@
     "helmet": "^7.1.0",
     "joi": "^17.11.0",
     "morgan": "^1.10.0",
+    "node-cache": "^5.1.2",
     "path": "^0.12.7",
+    "pm2-logrotate": "^2.7.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1",
@@ -58,10 +60,13 @@
     "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.1",
     "pm2": "^5.3.0",
-    "eslint": "^8.55.0",
-    "prettier": "^3.1.0"
+    "prettier": "^3.1.0",
+    "supertest": "^6.3.3"
   },
   "keywords": [
     "monday",

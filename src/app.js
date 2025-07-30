@@ -12,11 +12,10 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const { validateEnvironment } = require('./middlewares/validation');
 
 // Importar rotas
-const automationRoutes = require('./routes/automation');
-const mondayRoutes = require('./routes/monday');
-const webhookRoutes = require('./routes/webhook');
-const healthRoutes = require('./routes/health');
-const configRoutes = require('./routes/config');
+const routes = require('./routes');
+
+// Importar serviços
+const { testMondayConnection } = require('./services/mondayService');
 
 /**
  * Classe principal da aplicação Monday API Automation
@@ -94,9 +93,20 @@ class App {
    * Configura todas as rotas da aplicação
    */
   setupRoutes() {
-    // Rota raiz - redireciona para documentação
+    // Rota raiz - retorna informações da API
     this.app.get('/', (req, res) => {
-      res.redirect('/api-docs');
+      res.json({
+        message: 'Monday.com Automation API',
+        version: process.env.npm_package_version || '2.0.0',
+        status: 'online',
+        timestamp: new Date().toISOString(),
+        documentation: '/api-docs',
+        endpoints: {
+          v1: '/api/v1',
+          health: '/health',
+          config: '/config'
+        }
+      });
     });
 
     // Documentação Swagger
@@ -115,16 +125,7 @@ class App {
     }));
 
     // Rotas da API
-    this.app.use('/health', healthRoutes);
-    this.app.use('/config', configRoutes);
-    this.app.use('/api/automation', automationRoutes);
-    this.app.use('/api/monday', mondayRoutes);
-    this.app.use('/webhook', webhookRoutes);
-
-    // Manter compatibilidade com rotas antigas
-    this.app.use('/automatizar', automationRoutes);
-    this.app.use('/test-monday', mondayRoutes);
-    this.app.use('/produto', mondayRoutes);
+    this.app.use('/api', routes);
   }
 
   /**
@@ -158,6 +159,12 @@ class App {
       
       const logsDir = path.join(process.cwd(), 'logs');
       await fs.ensureDir(logsDir);
+
+      // Validar conexão com o Monday.com na inicialização
+      if (process.env.NODE_ENV !== 'test') {
+        await testMondayConnection();
+        console.log('✅ Conexão com o Monday.com validada com sucesso.');
+      }
       
       console.log('✅ Aplicação inicializada com sucesso');
       return true;
@@ -204,25 +211,30 @@ class App {
     const environment = process.env.NODE_ENV || 'development';
     
     this.app.listen(port, () => {
-      console.log('🚀 ===================================');
-      console.log('🚀 Monday API Automation v2.0');
-      console.log('🚀 ===================================');
-      console.log(`🌐 Servidor: http://localhost:${port}`);
-      console.log(`📚 Docs: http://localhost:${port}/api-docs`);
-      console.log(`🔧 Ambiente: ${environment}`);
-      console.log(`👨‍💻 Desenvolvido por: Nathan Silva - Fagron Tech`);
-      console.log('🚀 ===================================');
-      console.log('📋 Rotas disponíveis:');
-      console.log('   📚 GET  /api-docs - Documentação Swagger');
-      console.log('   ❤️  GET  /health - Health check');
-      console.log('   ⚙️  GET  /config - Configurações');
-      console.log('   🔄 POST /api/automation - Automação principal');
-      console.log('   🔗 GET  /api/monday/* - Endpoints Monday.com');
-      console.log('   📥 POST /webhook/* - Webhooks');
-      console.log('🚀 ===================================');
-      console.log(`⏰ Iniciado em: ${new Date().toISOString()}`);
+      console.log(' Monday API Automation v2.0');
+      console.log(' ===================================');
+      console.log(` Servidor: http://localhost:${port}`);
+      console.log(` Docs: http://localhost:${port}/api-docs`);
+      console.log(` Ambiente: ${environment}`);
+      console.log(` Desenvolvido por: Nathan Silva - Fagron Tech`);
+      console.log(' ===================================');
+      console.log(' Rotas disponíveis:');
+      console.log('   GET  /api-docs - Documentação Swagger');
+      console.log('    GET  /health - Health check');
+      console.log('    GET  /config - Configurações');
+      console.log('    POST /api/automation - Automação principal');
+      console.log('    GET  /api/monday/* - Endpoints Monday.com');
+      console.log('    POST /webhook/* - Webhooks');
+      console.log(' ===================================');
+      console.log(` Iniciado em: ${new Date().toISOString()}`);
     });
   }
 }
 
-module.exports = App;
+// Para testes, exportar uma instância da aplicação
+if (process.env.NODE_ENV === 'test') {
+  const appInstance = new App();
+  module.exports = appInstance.getApp();
+} else {
+  module.exports = App;
+}

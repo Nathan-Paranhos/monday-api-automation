@@ -1,9 +1,5 @@
 const express = require('express');
-const automationRoutes = require('./automation');
-const mondayRoutes = require('./monday');
-const webhookRoutes = require('./webhook');
-const healthRoutes = require('./health');
-const configRoutes = require('./config');
+const v1Routes = require('./v1');
 const { logger } = require('../../logs/logger');
 
 const router = express.Router();
@@ -32,9 +28,7 @@ router.get('/', (req, res) => {
     status: 'online',
     timestamp: new Date().toISOString(),
     endpoints: {
-      automation: '/api/automation',
-      monday: '/api/monday',
-      webhooks: '/api/webhooks',
+      v1: '/api/v1',
       health: '/api/health',
       config: '/api/config',
       docs: '/api-docs'
@@ -43,25 +37,9 @@ router.get('/', (req, res) => {
 });
 
 // Registrar rotas por módulo
-router.use('/automation', automationRoutes);
-router.use('/monday', mondayRoutes);
-router.use('/webhooks', webhookRoutes);
-router.use('/health', healthRoutes);
-router.use('/config', configRoutes);
+router.use('/v1', v1Routes);
 
-// Rota de informações da API (compatibilidade)
-router.get('/info', (req, res) => {
-  res.json({
-    name: 'Monday.com Automation API',
-    version: process.env.npm_package_version || '1.0.0',
-    description: 'API para automação de processos no Monday.com',
-    author: 'Fagron',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
-  });
-});
+
 
 // Middleware de tratamento de rotas não encontradas
 router.use('*', (req, res) => {
@@ -75,9 +53,7 @@ router.use('*', (req, res) => {
     error: 'Rota não encontrada',
     message: `A rota ${req.method} ${req.originalUrl} não existe`,
     availableRoutes: {
-      automation: '/api/automation',
-      monday: '/api/monday',
-      webhooks: '/api/webhooks',
+      v1: '/api/v1',
       health: '/api/health',
       config: '/api/config',
       docs: '/api-docs'

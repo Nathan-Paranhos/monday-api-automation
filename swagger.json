@@ -1,759 +1,226 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Monday API Automation",
+    "title": "Monday API Automation - v1",
     "description": "API para automatizar a criação de estrutura de pastas baseada em demandas do Monday.com, definindo analistas responsáveis por produto.",
     "version": "1.0.0",
     "contact": {
       "name": "Nathan Silva - Fagron Tech",
       "email": "nathan.silva@fagrontech.com.br"
-    },
-    "license": {
-      "name": "ISC",
-      "url": "https://opensource.org/licenses/ISC"
     }
   },
   "servers": [
     {
       "url": "https://monday-api-automation.onrender.com",
-      "description": "Servidor de Produção (Render) - GitHub: https://github.com/Nathan-Paranhos/monday-api-automation"
+      "description": "Servidor de Produção (Render)"
     },
     {
       "url": "http://localhost:3000",
       "description": "Servidor de Desenvolvimento Local"
     }
   ],
+  "tags": [
+    {
+      "name": "Automation",
+      "description": "Endpoints para automação de processos"
+    },
+    {
+      "name": "Monday.com",
+      "description": "Endpoints para interação com o Monday.com"
+    },
+    {
+      "name": "System",
+      "description": "Endpoints de sistema e saúde da API"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Endpoints para recebimento de webhooks"
+    },
+    {
+      "name": "Version",
+      "description": "Endpoint para versionamento da API"
+    }
+  ],
   "paths": {
     "/": {
+        "get": {
+            "tags": ["System"],
+            "summary": "Informações da API",
+            "description": "Retorna informações básicas sobre a API.",
+            "responses": {
+                "200": {
+                    "description": "Informações da API"
+                }
+            }
+        }
+    },
+    "/api/v1/automation/cliente/{id}": {
       "get": {
-        "tags": ["Sistema"],
-        "summary": "Root Endpoint",
-        "description": "Endpoint raiz da API",
-        "operationId": "root",
-        "responses": {
-          "200": {
-            "description": "Informações básicas da API",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {"type": "string"},
-                    "version": {"type": "string"},
-                    "timestamp": {"type": "string", "format": "date-time"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/info": {
-      "get": {
-        "tags": ["Sistema"],
-        "summary": "API Info",
-        "description": "Informações sobre a API",
-        "operationId": "info",
-        "responses": {
-          "200": {
-            "description": "Informações da API",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "name": {"type": "string"},
-                    "version": {"type": "string"},
-                    "description": {"type": "string"},
-                    "timestamp": {"type": "string", "format": "date-time"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health": {
-      "get": {
-        "tags": ["Health"],
-        "summary": "Basic Health Check",
-        "description": "Verifica se a API está funcionando",
-        "operationId": "healthCheck",
-        "responses": {
-          "200": {
-            "description": "API funcionando normalmente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health/detailed": {
-      "get": {
-        "tags": ["Health"],
-        "summary": "Detailed Health Check",
-        "description": "Verifica detalhadamente o status da API",
-        "operationId": "detailedHealthCheck",
-        "responses": {
-          "200": {
-            "description": "Status detalhado da API",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {"type": "string"},
-                    "timestamp": {"type": "string", "format": "date-time"},
-                    "uptime": {"type": "number"},
-                    "memory": {"type": "object"},
-                    "dependencies": {"type": "object"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/automation/list": {
-      "get": {
-        "tags": ["Automação"],
-        "summary": "Listar Automações",
-        "description": "Lista todas as automações executadas",
-        "operationId": "listAutomations",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {"type": "integer", "default": 1}
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {"type": "integer", "default": 10}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Lista de automações",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "automations": {"type": "array"},
-                    "total": {"type": "integer"},
-                    "page": {"type": "integer"},
-                    "limit": {"type": "integer"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/automation/process": {
-      "post": {
-        "tags": ["Automação"],
-        "summary": "Processar Automação",
-        "description": "Executa uma nova automação",
-        "operationId": "processAutomation",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AutomacaoRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Automação processada com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomacaoSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dados inválidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/monday/test": {
-      "get": {
-        "tags": ["Monday.com"],
-        "summary": "Testar Conexão Monday",
-        "description": "Verifica se a conexão com a API do Monday.com está funcionando",
-        "operationId": "testMondayConnection",
-        "responses": {
-          "200": {
-            "description": "Teste de conexão realizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MondayTestResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/monday/products/{clientId}": {
-      "get": {
-        "tags": ["Monday.com"],
-        "summary": "Consultar Produto por ID",
-        "description": "Busca o produto associado a um cliente específico no Monday.com",
-        "operationId": "queryProduct",
-        "parameters": [
-          {
-            "name": "clientId",
-            "in": "path",
-            "required": true,
-            "description": "ID do cliente",
-            "schema": {
-              "type": "integer",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Produto encontrado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProdutoResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/webhook/monday": {
-      "post": {
-        "tags": ["Webhook"],
-        "summary": "Webhook Monday.com",
-        "description": "Recebe notificações do Monday.com",
-        "operationId": "mondayWebhook",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "challenge": {"type": "string"},
-                  "event": {"type": "object"}
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Webhook processado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "challenge": {"type": "string"},
-                    "status": {"type": "string"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/webhook/history": {
-      "get": {
-        "tags": ["Webhook"],
-        "summary": "Histórico de Webhooks",
-        "description": "Recupera o histórico de webhooks processados",
-        "operationId": "webhookHistory",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {"type": "integer", "default": 1}
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {"type": "integer", "default": 10}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Histórico de webhooks",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "webhooks": {"type": "array"},
-                    "total": {"type": "integer"},
-                    "page": {"type": "integer"},
-                    "limit": {"type": "integer"}
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/config": {
-      "get": {
-        "tags": ["Configuração"],
-        "summary": "Obter Configurações",
-        "description": "Retorna as configurações públicas da aplicação",
-        "operationId": "getConfig",
-        "responses": {
-          "200": {
-            "description": "Configurações obtidas com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfigResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/automatizar": {
-      "post": {
-        "tags": ["Automação"],
-        "summary": "Automação Principal (Legacy)",
-        "description": "Executa a automação completa: consulta Monday.com, cria estrutura de pastas e copia arquivo modelo",
-        "operationId": "executarAutomacao",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AutomacaoRequest"
-              },
-              "example": {
-                "id_cliente": 3333,
-                "nome_farmacia": "Farmácia Exemplo"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Automação executada com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomacaoSuccessResponse"
-                },
-                "example": {
-                  "operacao_status": "ok",
-                  "produto": "BOT",
-                  "principal_produto": "Fórmula Certa",
-                  "status": {
-                    "original": "Na Fila",
-                    "normalizado": "na_fila"
-                  },
-                  "elemento": "12345 - Farmácia Exemplo",
-                  "campos": {
-                    "data_solicitacao": "2024-01-10",
-                    "tipo_rx": "Fórmula Certa"
-                  },
-                  "pasta": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345",
-                  "arquivo_modelo": "C:\\Users\\Usuario\\OneDrive\\#BOT EXTENSÃO\\12345\\Fluxo_Cliente_12345.vsdx",
-                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
-                  "cliente": {
-                    "id": 12345,
-                    "nome_farmacia": "Farmácia Exemplo"
-                  },
-                  "timestamp": "2024-01-15T10:30:00.000Z"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dados de entrada inválidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "status": "erro",
-                  "erro": "Campo \"id_cliente\" deve ser um número positivo",
-                  "codigo": "DADOS_INVALIDOS",
-                  "timestamp": "2024-01-15T10:30:00.000Z"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Demanda não encontrada no Monday.com",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "status": "erro",
-                  "erro": "Demanda não encontrada para o cliente ID: 12345",
-                  "codigo": "DEMANDA_NAO_ENCONTRADA",
-                  "timestamp": "2024-01-15T10:30:00.000Z"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sem permissão para criar pastas/arquivos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Erro interno do servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Erro de conexão com Monday.com",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/test-monday": {
-      "get": {
-        "tags": ["Monday.com"],
-        "summary": "Teste de Conexão Monday",
-        "description": "Verifica se a conexão com a API do Monday.com está funcionando",
-        "operationId": "testarConexaoMonday",
-        "responses": {
-          "200": {
-            "description": "Teste de conexão realizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MondayTestResponse"
-                },
-                "examples": {
-                  "sucesso": {
-                    "summary": "Conexão bem-sucedida",
-                    "value": {
-                      "status": "ok",
-                      "monday_conectado": true,
-                      "timestamp": "2024-01-15T10:30:00.000Z"
-                    }
-                  },
-                  "falha": {
-                    "summary": "Falha na conexão",
-                    "value": {
-                      "status": "erro",
-                      "monday_conectado": false,
-                      "timestamp": "2024-01-15T10:30:00.000Z"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Erro ao testar conexão",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/produto/{id}": {
-      "get": {
-        "tags": ["Monday.com"],
-        "summary": "Consultar Produto por ID",
-        "description": "Busca o produto associado a um cliente específico no Monday.com",
-        "operationId": "consultarProduto",
+        "tags": ["Automation"],
+        "summary": "Obter informações simplificadas do cliente",
+        "description": "Retorna informações simplificadas de um cliente para exibição no frontend.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "ID do cliente",
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "example": 12345
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Produto encontrado com sucesso",
+            "description": "Informações do cliente",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProdutoResponse"
-                },
-                "example": {
-                  "operacao_status": "ok",
-                  "id_cliente": 12345,
-                  "produto": "BOT",
-                  "principal_produto": "Fórmula Certa",
-                  "status": {
-                    "original": "Na Fila",
-                    "normalizado": "na_fila"
-                  },
-                  "elemento": "12345 - FARMÁCIA EXEMPLO",
-                  "campos": {
-                    "data_solicitacao": "2024-01-10",
-                    "tipo_rx": "Fórmula Certa"
-                  },
-                  "responsavel": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br",
-                  "timestamp": "2024-01-15T10:30:00.000Z"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "ID do cliente inválido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ClientInfoResponse"
                 }
               }
             }
           },
           "404": {
-            "description": "Produto não encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
+            "description": "Cliente não encontrado"
           }
         }
       }
     },
-    "/api/farmacias/bot": {
-      "get": {
-        "tags": ["Monday.com"],
-        "summary": "Buscar Farmácias com Produto BOT",
-        "description": "Busca todas as farmácias que possuem o produto 'BOT' no Monday.com",
-        "operationId": "buscarFarmaciasBOT",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "description": "Filtrar por status normalizado",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "produto_principal",
-            "in": "query",
-            "description": "Filtrar por produto principal",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Farmácias com produto BOT encontradas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FarmaciasBOTResponse"
+    "/api/v1/automation": {
+        "get": {
+            "tags": ["Automation"],
+            "summary": "Lista todas as automações",
+            "parameters": [
+                {
+                    "name": "page",
+                    "in": "query",
+                    "schema": {"type": "integer", "default": 1}
                 },
-                "example": {
-                  "status": "ok",
-                  "total": 2,
-                  "filtros": {
-                    "status": "na_fila",
-                    "produto_principal": "Fórmula Certa"
-                  },
-                  "farmacias": [
-                    {
-                      "id": "123456789",
-                      "elemento": "2707 - BOULEVARD PHARMA",
-                      "produto": "BOT",
-                      "principal_produto": "Fórmula Certa",
-                      "status": {
-                        "original": "Na Fila",
-                        "normalizado": "na_fila"
-                      }
-                    },
-                    {
-                      "id": "987654321",
-                      "elemento": "3456 - FARMÁCIA CENTRAL",
-                      "produto": "BOT",
-                      "principal_produto": "Fórmula Certa",
-                      "status": {
-                        "original": "Na Fila",
-                        "normalizado": "na_fila"
-                      }
+                {
+                    "name": "limit",
+                    "in": "query",
+                    "schema": {"type": "integer", "default": 20}
+                },
+                {
+                    "name": "status",
+                    "in": "query",
+                    "schema": {"type": "string", "enum": ["processando", "concluido", "erro", "cancelado"]}
+                },
+                {
+                    "name": "clienteId",
+                    "in": "query",
+                    "schema": {"type": "string"}
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Lista de automações"
+                }
+            }
+        }
+    },
+    "/api/v1/automation/process": {
+        "post": {
+            "tags": ["Automation"],
+            "summary": "Processa uma nova automação",
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "clienteId": {"type": "string"},
+                                "produto": {"type": "string"}
+                            }
+                        }
                     }
-                  ],
-                  "timestamp": "2024-01-15T10:30:00.000Z"
                 }
-              }
-            }
-          },
-          "500": {
-            "description": "Erro interno do servidor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "responses": {
+                "200": {
+                    "description": "Automação processada"
                 }
-              }
             }
-          }
         }
-      }
     },
-    "/config": {
-      "get": {
-        "tags": ["Sistema"],
-        "summary": "Obter Configurações",
-        "description": "Retorna as configurações da aplicação (sem dados sensíveis)",
-        "operationId": "obterConfiguracoes",
-        "responses": {
-          "200": {
-            "description": "Configurações obtidas com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfigResponse"
-                },
-                "example": {
-                  "produtos_validos": ["BOT"],
-                  "status_validos": ["na fila", "em andamento", "concluido"],
-                  "responsaveis": {
-                    "BOT": "Pedro.Ribeiro@fagrontech.com.br,Bruno.Vaz@fagrontech.com.br"
-                  },
-                  "caminhos_produtos": {
-                    "BOT": "#BOT EXTENSÃO"
-                  },
-                  "servidor": {
-                    "porta": 3000,
-                    "ambiente": "development"
-                  },
-                  "timestamp": "2024-01-15T10:30:00.000Z"
+    "/api/v1/monday/test-connection": {
+        "get": {
+            "tags": ["Monday.com"],
+            "summary": "Testa conexão com Monday.com",
+            "responses": {
+                "200": {
+                    "description": "Conexão bem-sucedida"
                 }
-              }
             }
-          }
         }
-      }
     },
-    "/webhook/monday": {
+    "/api/v1/monday/product/{clienteId}": {
+        "get": {
+            "tags": ["Monday.com"],
+            "summary": "Consulta produto por ID do cliente",
+            "parameters": [
+                {
+                    "name": "clienteId",
+                    "in": "path",
+                    "required": true,
+                    "schema": {"type": "string"}
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Produto encontrado"
+                }
+            }
+        }
+    },
+    "/api/v1/webhooks/monday": {
       "post": {
-        "tags": ["Webhook"],
-        "summary": "Webhook do Monday.com",
-        "description": "Endpoint para receber notificações automáticas do Monday.com quando o produto 'BOT' é selecionado",
+        "tags": ["Webhooks"],
+        "summary": "Receber webhook do Monday.com",
+        "description": "Endpoint para receber e processar webhooks do Monday.com.",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "event": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "example": "change_column_value"
-                      },
-                      "columnId": {
-                        "type": "string",
-                        "example": "produto"
-                      },
-                      "pulseId": {
-                        "type": "string",
-                        "example": "123456789"
-                      }
-                    }
-                  }
-                },
-                "required": ["event"]
+                "type": "object"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Webhook processado com sucesso",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string",
-                  "example": "Webhook recebido com sucesso"
-                }
-              }
-            }
+            "description": "Webhook recebido com sucesso"
           },
-          "500": {
-            "description": "Erro ao processar webhook",
+          "401": {
+            "description": "Assinatura inválida"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+        "get": {
+            "tags": ["System"],
+            "summary": "Verificação de saúde da API",
+            "responses": {
+                "200": {
+                    "description": "API saudável"
+                }
+            }
+        }
+    },
+    "/api/v1/version": {
+      "get": {
+        "tags": ["Version"],
+        "summary": "Obter versão da API",
+        "description": "Retorna a versão da API e dos serviços vinculados.",
+        "responses": {
+          "200": {
+            "description": "Versão da API",
             "content": {
-              "text/plain": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "example": "Erro ao processar webhook"
+                  "$ref": "#/components/schemas/VersionResponse"
                 }
               }
             }
@@ -764,385 +231,42 @@
   },
   "components": {
     "schemas": {
-      "AutomacaoRequest": {
-        "type": "object",
-        "required": ["id_cliente", "nome_farmacia"],
-        "properties": {
-          "id_cliente": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "ID único do cliente",
-            "example": 12345
-          },
-          "nome_farmacia": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Nome da farmácia",
-            "example": "Farmácia Exemplo"
-          }
-        }
-      },
-      "AutomacaoSuccessResponse": {
+      "ClientInfoResponse": {
         "type": "object",
         "properties": {
-          "operacao_status": {
-            "type": "string",
-            "enum": ["ok"],
-            "description": "Status da operação"
-          },
-          "produto": {
-            "type": "string",
-            "enum": ["BOT", "Fórmula Certa", "Phusion"],
-            "description": "Produto encontrado no Monday.com"
-          },
-          "principal_produto": {
-            "type": "string",
-            "description": "Principal produto associado ao item no Monday.com"
-          },
-          "status": {
-            "type": "object",
-            "properties": {
-              "original": {
-                "type": "string",
-                "description": "Status original do Monday.com"
-              },
-              "normalizado": {
-                "type": "string",
-                "description": "Status normalizado para uso interno"
-              }
-            },
-            "description": "Informações de status do item"
-          },
-          "pasta": {
-            "type": "string",
-            "description": "Caminho completo da pasta criada"
-          },
-          "arquivo_modelo": {
-            "type": "string",
-            "description": "Caminho completo do arquivo modelo copiado"
-          },
-          "responsavel": {
-            "type": "string",
-            "description": "Email do responsável pelo produto. Para o produto BOT, contém múltiplos emails separados por vírgula."
-          },
-          "elemento": {
-            "type": "string",
-            "description": "Campo elemento do Monday.com que contém o código do cliente e nome da farmácia (formato: 'CÓDIGO - NOME_FARMACIA')",
-            "example": "12345 - Farmácia Exemplo"
-          },
-          "campos": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "Campos adicionais do Monday.com"
-          },
-          "cliente": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "integer",
-                "description": "ID do cliente"
-              },
-              "nome_farmacia": {
-                "type": "string",
-                "description": "Nome da farmácia"
-              }
-            }
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp da operação"
-          }
-        }
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["erro"],
-            "description": "Status da operação"
-          },
-          "erro": {
-            "type": "string",
-            "description": "Mensagem de erro descritiva"
+          "nome": {
+            "type": "string"
           },
           "codigo": {
-            "type": "string",
-            "enum": [
-              "DADOS_INVALIDOS",
-              "DEMANDA_NAO_ENCONTRADA",
-              "ERRO_CONEXAO",
-              "ERRO_PERMISSAO",
-              "ERRO_INTERNO",
-              "ROTA_NAO_ENCONTRADA",
-              "ID_INVALIDO",
-              "PRODUTO_NAO_ENCONTRADO"
-            ],
-            "description": "Código de erro padronizado"
+            "type": "string"
           },
-          "timestamp": {
+          "data_solicitacao": {
             "type": "string",
-            "format": "date-time",
-            "description": "Timestamp do erro"
+            "format": "date"
+          },
+          "analista_responsavel": {
+            "type": "string"
           }
         }
       },
-      "HealthResponse": {
+      "VersionResponse": {
         "type": "object",
         "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["ok"],
-            "description": "Status da API"
+          "api": {
+            "type": "string"
+          },
+          "moby": {
+            "type": "string"
+          },
+          "sync": {
+            "type": "string"
           },
           "timestamp": {
             "type": "string",
-            "format": "date-time",
-            "description": "Timestamp da verificação"
-          },
-          "service": {
-            "type": "string",
-            "description": "Nome do serviço"
-          }
-        }
-      },
-      "MondayTestResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["ok", "erro"],
-            "description": "Status do teste"
-          },
-          "monday_conectado": {
-            "type": "boolean",
-            "description": "Se a conexão com Monday.com está funcionando"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp do teste"
-          }
-        }
-      },
-      "ProdutoResponse": {
-        "type": "object",
-        "properties": {
-          "operacao_status": {
-            "type": "string",
-            "enum": ["ok"],
-            "description": "Status da consulta"
-          },
-          "id_cliente": {
-            "type": "integer",
-            "description": "ID do cliente consultado"
-          },
-          "produto": {
-            "type": "string",
-            "enum": ["BOT", "Fórmula Certa", "Phusion"],
-            "description": "Produto encontrado"
-          },
-          "principal_produto": {
-            "type": "string",
-            "description": "Principal produto associado ao item no Monday.com"
-          },
-          "status": {
-            "type": "object",
-            "properties": {
-              "original": {
-                "type": "string",
-                "description": "Status original do Monday.com"
-              },
-              "normalizado": {
-                "type": "string",
-                "description": "Status normalizado para uso interno"
-              }
-            },
-            "description": "Informações de status do item"
-          },
-          "elemento": {
-            "type": "string",
-            "description": "Campo elemento do Monday.com que contém o código do cliente e nome da farmácia (formato: 'CÓDIGO - NOME_FARMACIA')",
-            "example": "12345 - Farmácia Exemplo"
-          },
-          "campos": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "Campos adicionais do Monday.com"
-          },
-          "responsavel": {
-            "type": "string",
-            "description": "Email do responsável pelo produto. Para o produto BOT, contém múltiplos emails separados por vírgula."
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp da consulta"
-          }
-        }
-      },
-      "FarmaciasBOTResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["ok"],
-            "description": "Status da operação"
-          },
-          "total": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Número total de farmácias encontradas com produto BOT"
-          },
-          "filtros": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "description": "Filtro de status normalizado aplicado (se houver)",
-                "enum": ["na fila", "em andamento", "concluido", "finalizado", "pausado", "cancelado", "relacionamento", "pausado features", "aguardando 3º", "desenvolvimento", "aguardando implantações", "pausado cliente", "inadimplente"]
-              },
-              "produto_principal": {
-                "type": "string",
-                "description": "Filtro de produto principal aplicado (se houver)",
-                "enum": ["BOT", "Fórmula Certa", "Phusion"]
-              }
-            },
-            "description": "Filtros aplicados na consulta"
-          },
-          "farmacias": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "description": "ID único do item no Monday.com"
-                },
-                "elemento": {
-                  "type": "string",
-                  "description": "Nome da farmácia (ex: 2707 - BOULEVARD PHARMA)"
-                },
-                "produto": {
-                  "type": "string",
-                  "enum": ["BOT"],
-                  "description": "Produto encontrado (sempre BOT nesta consulta)"
-                },
-                "principal_produto": {
-                  "type": "string",
-                  "description": "Principal produto associado ao item no Monday.com"
-                },
-                "status": {
-                  "type": "object",
-                  "properties": {
-                    "original": {
-                      "type": "string",
-                      "description": "Status original do Monday.com"
-                    },
-                    "normalizado": {
-                      "type": "string",
-                      "description": "Status normalizado para uso interno"
-                    }
-                  },
-                  "description": "Informações de status do item"
-                },
-                "campos": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "description": "Campos adicionais do Monday.com"
-                }
-              },
-              "required": ["id", "elemento", "produto"]
-            },
-            "description": "Lista de farmácias com produto BOT"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp da consulta"
-          }
-        },
-        "required": ["status", "total", "farmacias", "timestamp"]
-      },
-      "ConfigResponse": {
-        "type": "object",
-        "properties": {
-          "produtos_validos": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Lista de produtos válidos"
-          },
-          "status_validos": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Lista de status válidos"
-          },
-          "responsaveis": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string",
-              "format": "email"
-            },
-            "description": "Mapeamento de produtos para responsáveis"
-          },
-          "caminhos_produtos": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "Mapeamento de produtos para caminhos de pasta"
-          },
-          "servidor": {
-            "type": "object",
-            "properties": {
-              "porta": {
-                "type": "integer",
-                "description": "Porta do servidor"
-              },
-              "ambiente": {
-                "type": "string",
-                "description": "Ambiente de execução"
-              }
-            }
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp da consulta"
+            "format": "date-time"
           }
         }
       }
     }
-  },
-  "tags": [
-    {
-      "name": "Sistema",
-      "description": "Endpoints básicos do sistema"
-    },
-    {
-      "name": "Health",
-      "description": "Endpoints de monitoramento e saúde da API"
-    },
-    {
-      "name": "Automação",
-      "description": "Endpoints para execução e gerenciamento de automações"
-    },
-    {
-      "name": "Monday.com",
-      "description": "Endpoints para interação com Monday.com"
-    },
-    {
-      "name": "Webhook",
-      "description": "Endpoints para receber e gerenciar webhooks"
-    },
-    {
-      "name": "Configuração",
-      "description": "Endpoints para gerenciamento de configurações"
-    }
-  ]
+  }
 }
