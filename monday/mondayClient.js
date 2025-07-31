@@ -621,20 +621,90 @@ class MondayClient {
   }
 
   /**
-   * Atribui um responsável a uma demanda (item) no Monday.com
+   * Busca usuários por email no Monday.com
+   * @param {string|Array} emails - Email ou array de emails
+   * @returns {Promise<Array>} Array de IDs de usuários encontrados
+   */
+  async buscarUsuariosPorEmail(emails) {
+    try {
+      const emailArray = Array.isArray(emails) ? emails : [emails];
+      const userIds = [];
+      
+      for (const email of emailArray) {
+        try {
+          const query = `
+            query {
+              users {
+                id
+                email
+                name
+              }
+            }
+          `;
+          
+          const response = await this.client.request(query);
+          
+          if (response.users) {
+            const user = response.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (user) {
+              userIds.push(user.id);
+              logConsultaMonday('Buscar usuário por email', `Usuário encontrado: ${user.name} (${user.email}) - ID: ${user.id}`);
+            } else {
+              console.warn(`Usuário não encontrado para o email: ${email}`);
+            }
+          }
+        } catch (error) {
+          console.warn(`Erro ao buscar usuário ${email}:`, error.message);
+        }
+      }
+      
+      return userIds;
+    } catch (error) {
+      logErro('Buscar usuários por email', error, { emails });
+      throw error;
+    }
+  }
+
+  /**
+   * Atribui responsáveis a uma demanda (item) no Monday.com
    * @param {number} itemId - ID do item
-   * @param {number} userId - ID do usuário a ser atribuído
+   * @param {string|Array} emailsOuIds - Email(s) ou ID(s) do(s) usuário(s) a ser(em) atribuído(s)
    * @returns {Promise<Object>} Resposta da API
    */
-  async atribuirResponsavel(itemId, userId) {
+  async atribuirResponsavel(itemId, emailsOuIds) {
     try {
+      let userIds = [];
+      
+      // Se for um array de emails ou um único email, busca os IDs
+      if (Array.isArray(emailsOuIds)) {
+        if (emailsOuIds.length > 0 && typeof emailsOuIds[0] === 'string' && emailsOuIds[0].includes('@')) {
+          userIds = await this.buscarUsuariosPorEmail(emailsOuIds);
+        } else {
+          userIds = emailsOuIds;
+        }
+      } else if (typeof emailsOuIds === 'string' && emailsOuIds.includes('@')) {
+        userIds = await this.buscarUsuariosPorEmail(emailsOuIds);
+      } else {
+        userIds = [emailsOuIds];
+      }
+      
+      if (userIds.length === 0) {
+        throw new Error('Nenhum usuário válido encontrado');
+      }
+      
+      // Constrói o array de pessoas para o Monday.com
+      const personsAndTeams = userIds.map(id => ({
+        id: id.toString(),
+        kind: 'person'
+      }));
+      
       const mutation = `
-        mutation ($itemId: ID!, $userId: ID!, $boardId: ID!) {
+        mutation ($itemId: ID!, $boardId: ID!, $value: JSON!) {
           change_column_value(
             board_id: $boardId,
             item_id: $itemId,
             column_id: "person",
-            value: "{\"personsAndTeams\":[{\"id\":\"${userId}\", \"kind\":\"person\"}]}"
+            value: $value
           ) {
             id
           }
@@ -643,17 +713,56 @@ class MondayClient {
 
       const variables = {
         itemId: itemId.toString(),
-        userId: userId.toString(),
-        boardId: config.monday.boardId.toString()
+        boardId: config.monday.boardId.toString(),
+        value: JSON.stringify({ personsAndTeams })
       };
 
       const response = await this.client.request(mutation, variables);
-      logConsultaMonday('Atribuir Responsável', `Responsável ${userId} atribuído ao item ${itemId}`);
+      logConsultaMonday('Atribuir Responsável', `Responsáveis ${userIds.join(', ')} atribuídos ao item ${itemId}`);
       return response;
 
     } catch (error) {
-      logErro('Atribuir Responsável', error, { itemId, userId });
+      logErro('Atribuir Responsável', error, { itemId, emailsOuIds });
       throw new Error(`Erro ao atribuir responsável: ${error.message}`);
+    }
+  }
+
+  /**
+   * Busca as colunas do board
+   * @returns {Promise<Array>} Array com informações das colunas
+   */
+  async buscarColunas() {
+    try {
+      const query = `
+        query($boardId: [ID!]) {
+          boards(ids: $boardId) {
+            columns {
+              id
+              title
+              type
+              settings_str
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        boardId: [config.monday.boardId]
+      };
+
+      const response = await this.client.request(query, variables);
+
+      if (!response.boards || response.boards.length === 0) {
+        throw new Error(`Board ${config.monday.boardId} não encontrado`);
+      }
+
+      const colunas = response.boards[0].columns;
+      logConsultaMonday('Buscar colunas do board', `${colunas.length} colunas encontradas`);
+      
+      return colunas;
+    } catch (error) {
+      logErro('Buscar colunas do board', error);
+      throw error;
     }
   }
 

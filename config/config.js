@@ -23,9 +23,18 @@ const config = {
 
   // Configurações do servidor
   server: {
-    port: process.env.PORT || 3000,
+    port: process.env.PORT || 10000,
     environment: process.env.NODE_ENV || 'development',
     isProduction: process.env.NODE_ENV === 'production'
+  },
+
+  // Configurações de email
+  email: {
+    enabled: process.env.EMAIL_ENABLED === 'true' || true, // Habilita notificações por email
+    user: process.env.EMAIL_USER,
+    password: process.env.EMAIL_PASSWORD,
+    service: process.env.EMAIL_SERVICE || 'gmail', // gmail, outlook, etc.
+    from: process.env.EMAIL_FROM || 'sistema-bot@fagrontech.com.br'
   },
 
   // Caminhos base do sistema
@@ -76,13 +85,13 @@ const config = {
   // Produtos de referencias para criação de pastas 
   produtosValidos: ['BOT', 'Fórmula Certa', 'Phusion'],
 
-  // ATENÇÃO: Substitua os valores 'id_da_coluna' pelos IDs reais das colunas do seu board no Monday.com
+  // IDs das colunas no Monday.com (IDs reais obtidos da API)
   colunasIds: {
-    status: 'status', // Ex: 'status_1'
-    produto: 'connect_boards', // Ex: 'connect_boards_1'
-    principalProduto: 'connect_boards2', // Ex: 'connect_boards_2'
-    responsavel: 'person', // Ex: 'person_1'
-    codigoCliente: 'text', // Ex: 'text_1'
+    status: 'status_1', // ID da coluna de status principal
+    produto: 'status_1', // ID da coluna de produto (mesmo que status)
+    principalProduto: 'status_15', // ID da coluna de produto principal
+    responsavel: 'person', // ID da coluna de responsável
+    codigoCliente: 'text', // ID da coluna de código do cliente
     // Adicione outros IDs de coluna conforme necessário
   },
   

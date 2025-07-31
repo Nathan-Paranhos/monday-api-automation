@@ -1,3 +1,4 @@
+const axios = require('axios');
 const NodeCache = require('node-cache');
 const winston = require('winston');
 
@@ -24,50 +25,114 @@ if (process.env.NODE_ENV !== 'production') {
 // Cache para deduplicação com TTL de 10 minutos
 const cache = new NodeCache({ stdTTL: 600 });
 
+// URL da API de produção
+const API_BASE_URL = 'https://monday-api-automation.onrender.com';
+
+// Configuração do axios com timeout
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000, // 30 segundos
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 function deveProcessar(item) {
-  if (cache.get(item.id) === item.updated_at) return false;
-  cache.set(item.id, item.updated_at);
+  const cacheKey = `${item.id}_${item.updated_at}`;
+  if (cache.get(cacheKey)) {
+    return false;
+  }
+  cache.set(cacheKey, true);
   return true;
 }
 
-async function consultarItensMonday() {
+async function verificarStatusAPI() {
   try {
-    // Implementar lógica de consulta ao Monday.com
-    // Retornar array de items com status "Na Fila"
-    return [];
-  } catch (err) {
-    logger.error('[CONSULTA] Falha ao buscar itens:', err.message);
-    throw err;
+    const response = await apiClient.get('/health');
+    logger.info('[API] Status da API:', response.data);
+    return response.data.status === 'ok';
+  } catch (error) {
+    logger.error('[API] Erro ao verificar status da API:', error.message);
+    return false;
   }
 }
 
-async function processarItem(item) {
+async function buscarFarmaciasBOT() {
   try {
-    logger.info(`[PROCESSAMENTO] Iniciando processamento do item ${item.id}`);
-    // Implementar lógica de processamento do item
-    // - Criar pastas
-    // - Atribuir responsáveis
-    // - Atualizar status
-  } catch (err) {
-    logger.error(`[PROCESSAMENTO] Falha ao processar item ${item.id}:`, err.message);
-    throw err;
+    const response = await apiClient.get('/api/monday/pharmacies/bot', {
+      params: {
+        status: 'Na Fila',
+        limit: 50
+      }
+    });
+    
+    if (response.data && response.data.dados) {
+      logger.info(`[CONSULTA] Encontradas ${response.data.dados.length} farmácias BOT`);
+      return response.data.dados;
+    }
+    
+    return [];
+  } catch (error) {
+    logger.error('[CONSULTA] Erro ao buscar farmácias BOT:', error.message);
+    throw error;
+  }
+}
+
+async function processarItemViaAPI(itemId) {
+  try {
+    logger.info(`[PROCESSAMENTO] Processando item ${itemId} via API`);
+    
+    const response = await apiClient.post(`/test-item/${itemId}`);
+    
+    if (response.data && response.data.status === 'sucesso') {
+      logger.info(`[PROCESSAMENTO] Item ${itemId} processado com sucesso`);
+      return true;
+    } else {
+      logger.warn(`[PROCESSAMENTO] Resposta inesperada para item ${itemId}:`, response.data);
+      return false;
+    }
+  } catch (error) {
+    logger.error(`[PROCESSAMENTO] Erro ao processar item ${itemId}:`, error.message);
+    throw error;
   }
 }
 
 async function verificarNovasDemandas() {
   try {
-    const items = await consultarItensMonday();
+    // Verificar se a API está funcionando
+    const apiOk = await verificarStatusAPI();
+    if (!apiOk) {
+      logger.warn('[VERIFICAÇÃO] API não está disponível, pulando verificação');
+      return;
+    }
 
-    for (const item of items) {
-      if (!deveProcessar(item)) {
-        logger.debug(`[DEDUPLICAÇÃO] Item ${item.id} já processado recentemente`);
+    // Buscar farmácias BOT com status "Na Fila"
+    const farmacias = await buscarFarmaciasBOT();
+    
+    if (farmacias.length === 0) {
+      logger.debug('[VERIFICAÇÃO] Nenhuma farmácia BOT encontrada com status "Na Fila"');
+      return;
+    }
+
+    // Processar cada farmácia encontrada
+    for (const farmacia of farmacias) {
+      if (!deveProcessar(farmacia)) {
+        logger.debug(`[DEDUPLICAÇÃO] Farmácia ${farmacia.id} já processada recentemente`);
         continue;
       }
-      await processarItem(item);
+
+      try {
+        await processarItemViaAPI(farmacia.id);
+        logger.info(`[SUCESSO] Farmácia ${farmacia.id} processada com sucesso`);
+      } catch (error) {
+        logger.error(`[ERRO] Falha ao processar farmácia ${farmacia.id}:`, error.message);
+      }
+
+      // Aguardar 2 segundos entre processamentos para não sobrecarregar a API
+      await esperar(2000);
     }
-  } catch (err) {
-    logger.error('[VERIFICAÇÃO] Falha ao verificar demandas:', err.message);
-    throw err;
+  } catch (error) {
+    logger.error('[VERIFICAÇÃO] Erro geral na verificação de demandas:', error.message);
   }
 }
 
@@ -77,17 +142,46 @@ function esperar(ms) {
 
 async function iniciarMonitoramento() {
   logger.info('[MONITOR] Iniciando serviço de monitoramento');
+  logger.info(`[MONITOR] API Base URL: ${API_BASE_URL}`);
 
+  // Verificação inicial da API
+  try {
+    const apiOk = await verificarStatusAPI();
+    if (apiOk) {
+      logger.info('[MONITOR] API está funcionando corretamente');
+    } else {
+      logger.warn('[MONITOR] API não está respondendo adequadamente');
+    }
+  } catch (error) {
+    logger.error('[MONITOR] Erro na verificação inicial da API:', error.message);
+  }
+
+  // Loop principal de monitoramento
   while (true) {
     try {
       await verificarNovasDemandas();
-    } catch (err) {
-      logger.error('[MONITORAMENTO] Falha:', err.message);
+    } catch (error) {
+      logger.error('[MONITORAMENTO] Falha no ciclo de monitoramento:', error.message);
     }
 
-    await esperar(20000); // 20 segundos
+    // Aguardar 30 segundos antes da próxima verificação
+    await esperar(30000);
   }
 }
 
+// Tratamento de sinais para encerramento gracioso
+process.on('SIGINT', () => {
+  logger.info('[MONITOR] Recebido SIGINT, encerrando monitoramento...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  logger.info('[MONITOR] Recebido SIGTERM, encerrando monitoramento...');
+  process.exit(0);
+});
+
 // Inicia o monitoramento
-iniciarMonitoramento();
+iniciarMonitoramento().catch(error => {
+  logger.error('[MONITOR] Erro fatal no monitoramento:', error.message);
+  process.exit(1);
+});

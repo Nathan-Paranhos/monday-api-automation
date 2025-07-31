@@ -1,11 +1,12 @@
 require('dotenv').config();
 const MondayClient = require('./monday/mondayClient');
 const FileManager = require('./fileManager/fileManager');
+const EmailService = require('./src/services/emailService');
 const config = require('./config/config');
-const { logger, logErro, logSucesso } = require('./logs/logger');
+const { logger, logErro, logSucesso, logConsultaMonday, logValidacao } = require('./logs/logger');
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // Configuração da API para receber notificações do Monday.com
 app.use(express.json());
@@ -182,39 +183,72 @@ async function processarFarmaciaBOT(farmacia, mondayClient) {
     
     logger.info(`Processando farmácia BOT: ${farmacia.elemento} (ID: ${farmacia.id}) - Produto principal: ${farmacia.principalProduto}`);
     
-    // Inicializa o gerenciador de arquivos
+    // Inicializa os serviços
     const fileManager = new FileManager();
+    const emailService = new EmailService();
     
     // Extrai o código do cliente - prioriza campo específico, depois nome, depois ID
-      let codigoCliente = farmacia.campos?.codigoCliente;
-      
-      if (!codigoCliente) {
-        // Tenta extrair do nome usando regex (formato: "1234 - Nome da Farmácia")
-        const nomeMatch = farmacia.elemento.match(/^(\d+)\s*-\s*(.+)$/);
-        codigoCliente = nomeMatch ? nomeMatch[1] : farmacia.id;
-      }
+    let codigoCliente = farmacia.campos?.codigoCliente;
     
-    // Determina o responsável com base no produto principal
-    const emailResponsavel = config.obterResponsavel(farmacia.principalProduto);
-    if (!emailResponsavel) {
-      throw new Error(`Não foi possível determinar o responsável para o produto ${farmacia.principalProduto}`);
+    if (!codigoCliente) {
+      // Tenta extrair do nome usando regex (formato: "1234 - Nome da Farmácia")
+      const nomeMatch = farmacia.elemento.match(/^(\d+)\s*-\s*(.+)$/);
+      codigoCliente = nomeMatch ? nomeMatch[1] : farmacia.id;
+    }
+    
+    // Determina os responsáveis com base no produto principal
+    const emailsResponsaveis = config.obterResponsavel(farmacia.principalProduto);
+    if (!emailsResponsaveis) {
+      throw new Error(`Não foi possível determinar os responsáveis para o produto ${farmacia.principalProduto}`);
     }
     
     // Cria a estrutura de pastas e copia o arquivo modelo
     const resultado = await fileManager.processarCliente(farmacia.principalProduto, codigoCliente);
     
     if (resultado.sucesso) {
-      // Atualiza o item no Monday.com
-      await mondayClient.atribuirResponsavel(farmacia.id, emailResponsavel);
+      // Atualiza o item no Monday.com com múltiplos responsáveis
+      await mondayClient.atribuirResponsavel(farmacia.id, emailsResponsaveis);
       
-      // Adiciona observação
-      const observacao = "🗂️ Pasta criada automaticamente e modelo de fluxo copiado com base no status 'Na Fila'.";
+      // Adiciona observação detalhada no Monday.com
+      const dataHora = new Date().toLocaleString('pt-BR');
+      const observacao = `🗂️ **Pasta criada automaticamente** - ${dataHora}\n\n` +
+                        `📂 **Caminho:** ${resultado.caminhoPasta}\n` +
+                        `📄 **Modelo copiado:** ${resultado.caminhoArquivo}\n` +
+                        `👥 **Responsáveis atribuídos:** ${Array.isArray(emailsResponsaveis) ? emailsResponsaveis.join(', ') : emailsResponsaveis}\n\n` +
+                        `✅ **Status:** Processamento automático concluído com sucesso`;
+      
       await mondayClient.adicionarObservacao(farmacia.id, observacao);
       
-      // Atualiza o status para "Configuração"
-      await mondayClient.atualizarStatus(farmacia.id, "Em andamento");
+      // Envia notificação por email se habilitado
+      if (config.email.enabled) {
+        try {
+          await emailService.enviarNotificacaoPastaCriada({
+            farmacia: farmacia.elemento,
+            produto: farmacia.principalProduto,
+            caminhoPasta: resultado.caminhoPasta,
+            responsaveis: emailsResponsaveis,
+            itemId: farmacia.id
+          });
+          
+          logger.info(`Notificação por email enviada para farmácia ${farmacia.elemento}`);
+        } catch (emailError) {
+          logger.error('Erro ao enviar notificação por email:', emailError);
+          // Não interrompe o processo se o email falhar
+        }
+      }
       
-      logSucesso({ operacao: 'Processamento de farmácia BOT', resultado: `Farmácia ${farmacia.elemento} (ID: ${farmacia.id}) processada com sucesso` });
+      // Atualiza o status para "Em andamento"
+      await mondayClient.alterarStatus(farmacia.id, "Em andamento");
+      
+      logSucesso({ 
+        operacao: 'Processamento de farmácia BOT', 
+        resultado: `Farmácia ${farmacia.elemento} (ID: ${farmacia.id}) processada com sucesso`,
+        detalhes: {
+          caminhoPasta: resultado.caminhoPasta,
+          responsaveis: emailsResponsaveis,
+          emailEnviado: config.email.enabled
+        }
+      });
     } else {
       logErro('Processamento de farmácia BOT', new Error(resultado.mensagem), { farmacia });
     }
@@ -284,7 +318,7 @@ async function main() {
           const observacao = "🗂️ Pasta criada automaticamente e modelo de fluxo copiado com base no status 'Na Fila'. #Teste 2.0 Nathan";
           await mondayClient.adicionarObservacao(farmacia.id, observacao);
           
-          await mondayClient.atualizarStatus(farmacia.id, "Em andamento");
+          await mondayClient.alterarStatus(farmacia.id, "Em andamento");
           
           logSucesso({ operacao: 'Processamento de farmácia', resultado: `Farmácia ${farmacia.elemento} (ID: ${farmacia.id}) processada com sucesso` });
         } else {
