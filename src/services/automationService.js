@@ -175,6 +175,123 @@ class AutomationService {
   }
 
   /**
+   * Processa um item específico do Monday.com
+   * @param {Object} itemData - Dados do item
+   * @returns {Promise<Object>} Resultado do processamento
+   */
+  async processSpecificItem(itemData) {
+    const { itemId, itemName, source = 'api', timestamp } = itemData;
+    const automationId = this.generateAutomationId();
+    
+    logger.info('Processando item específico', {
+      automationId,
+      itemId,
+      itemName,
+      source
+    });
+
+    try {
+      // Registrar início do processamento
+      this.registerAutomation(automationId, {
+        status: 'processando_item',
+        itemId,
+        itemName,
+        source,
+        startTime: new Date(),
+        steps: []
+      });
+
+      // Passo 1: Obter dados completos do item
+      this.updateAutomationStep(automationId, 'obtendo_dados_item', 'em_progresso');
+      const itemCompleto = await this.mondayService.getItemById(itemId);
+      
+      if (!itemCompleto) {
+        this.updateAutomationStep(automationId, 'obtendo_dados_item', 'falha', 'Item não encontrado');
+        throw new AppError(`Item com ID ${itemId} não encontrado`, 404, 'ITEM_NOT_FOUND');
+      }
+      
+      this.updateAutomationStep(automationId, 'obtendo_dados_item', 'sucesso', itemCompleto);
+
+      // Passo 2: Verificar se o item precisa ser processado
+      this.updateAutomationStep(automationId, 'verificando_processamento', 'em_progresso');
+      const needsProcessing = this.shouldProcessItem(itemCompleto);
+      
+      if (!needsProcessing) {
+        this.updateAutomationStep(automationId, 'verificando_processamento', 'ignorado', 'Item não requer processamento');
+        
+        const automation = this.automationHistory.get(automationId);
+        automation.status = 'ignorado';
+        automation.endTime = new Date();
+        automation.duration = automation.endTime - automation.startTime;
+        
+        return {
+          automationId,
+          status: 'ignorado',
+          reason: 'Item não requer processamento',
+          itemId,
+          itemName
+        };
+      }
+      
+      this.updateAutomationStep(automationId, 'verificando_processamento', 'sucesso', 'Item requer processamento');
+
+      // Passo 3: Extrair dados para automação
+      this.updateAutomationStep(automationId, 'extraindo_dados', 'em_progresso');
+      const automationData = this.extractAutomationDataFromItem(itemCompleto);
+      this.updateAutomationStep(automationId, 'extraindo_dados', 'sucesso', automationData);
+
+      // Passo 4: Processar automação
+      this.updateAutomationStep(automationId, 'executando_automacao', 'em_progresso');
+      const processResult = await this.processAutomation(automationData);
+      this.updateAutomationStep(automationId, 'executando_automacao', 'sucesso', processResult);
+
+      // Finalizar processamento
+      const automation = this.automationHistory.get(automationId);
+      automation.status = 'concluida';
+      automation.endTime = new Date();
+      automation.duration = automation.endTime - automation.startTime;
+      automation.result = processResult;
+
+      logger.info('Item processado com sucesso', {
+        automationId,
+        itemId,
+        duration: automation.duration
+      });
+
+      return {
+        automationId,
+        status: 'concluida',
+        itemId,
+        itemName,
+        result: processResult,
+        duration: automation.duration
+      };
+
+    } catch (error) {
+      // Registrar falha
+      const automation = this.automationHistory.get(automationId);
+      if (automation) {
+        automation.status = 'falha';
+        automation.endTime = new Date();
+        automation.duration = automation.endTime - automation.startTime;
+        automation.error = {
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        };
+      }
+
+      logger.error('Falha no processamento do item', {
+        automationId,
+        itemId,
+        error: error.message
+      });
+
+      throw error;
+    }
+  }
+
+  /**
    * Obtém status de uma automação
    * @param {string} automationId - ID da automação
    * @returns {Promise<Object>} Status da automação
@@ -342,6 +459,108 @@ class AutomationService {
       produto: itemData.name,
       responsavel: itemData.responsavel
     };
+  }
+
+  /**
+   * Verifica se um item deve ser processado
+   * @param {Object} item - Dados do item do Monday.com
+   * @returns {boolean} Se o item deve ser processado
+   */
+  shouldProcessItem(item) {
+    try {
+      // Verificar se o item tem status "Na Fila"
+      const statusColumn = item.column_values?.find(col => col.id === 'status');
+      const status = statusColumn?.text || '';
+      
+      if (status !== 'Na Fila') {
+        logger.debug('Item não está "Na Fila"', { itemId: item.id, status });
+        return false;
+      }
+
+      // Verificar se tem produto principal válido
+      const produtoColumn = item.column_values?.find(col => col.id === 'produto_principal');
+      const produto = produtoColumn?.text || '';
+      
+      const produtosValidos = ['Fórmula Certa', 'Phusion'];
+      if (!produtosValidos.includes(produto)) {
+        logger.debug('Produto principal não é válido', { itemId: item.id, produto });
+        return false;
+      }
+
+      // Verificar se é do tipo "BOT"
+      const tipoColumn = item.column_values?.find(col => col.id === 'tipo');
+      const tipo = tipoColumn?.text || '';
+      
+      if (tipo !== 'BOT') {
+        logger.debug('Item não é do tipo BOT', { itemId: item.id, tipo });
+        return false;
+      }
+
+      logger.info('Item deve ser processado', {
+        itemId: item.id,
+        status,
+        produto,
+        tipo
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Erro ao verificar se item deve ser processado', {
+        itemId: item?.id,
+        error: error.message
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Extrai dados de automação de um item específico
+   * @param {Object} item - Dados do item do Monday.com
+   * @returns {Object} Dados para automação
+   */
+  extractAutomationDataFromItem(item) {
+    try {
+      const clienteId = item.id;
+      const clienteNome = item.name;
+      
+      // Extrair produto principal
+      const produtoColumn = item.column_values?.find(col => col.id === 'produto_principal');
+      const produto = produtoColumn?.text || '';
+      
+      // Extrair responsável
+      const responsavelColumn = item.column_values?.find(col => col.id === 'responsavel');
+      const responsavel = responsavelColumn?.text || '';
+      
+      // Extrair outras informações relevantes
+      const observacoesColumn = item.column_values?.find(col => col.id === 'observacoes');
+      const observacoes = observacoesColumn?.text || '';
+      
+      const demandaColumn = item.column_values?.find(col => col.id === 'tipo_demanda');
+      const tipoDemanda = demandaColumn?.text || '';
+
+      logger.info('Dados extraídos do item', {
+        clienteId,
+        clienteNome,
+        produto,
+        responsavel,
+        tipoDemanda
+      });
+
+      return {
+        clienteId,
+        clienteNome,
+        produto,
+        responsavel,
+        observacoes,
+        tipoDemanda
+      };
+    } catch (error) {
+      logger.error('Erro ao extrair dados do item', {
+        itemId: item?.id,
+        error: error.message
+      });
+      throw new AppError('Erro ao extrair dados do item para automação', 500, 'DATA_EXTRACTION_ERROR');
+    }
   }
 }
 

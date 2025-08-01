@@ -1,6 +1,6 @@
 const { GraphQLClient } = require('graphql-request');
 const crypto = require('crypto');
-const logger = require('../../logs/logger');
+const { logger } = require('../../logs/logger');
 const { AppError } = require('../middlewares/errorHandler');
 
 /**
@@ -288,6 +288,15 @@ class MondayService {
       });
       throw new AppError('Erro ao obter item do Monday.com', 500, 'ITEM_GET_ERROR');
     }
+  }
+
+  /**
+   * Obtém item específico por ID (alias para obterItem)
+   * @param {string} itemId - ID do item
+   * @returns {Promise<Object>} Dados do item
+   */
+  async getItemById(itemId) {
+    return await this.obterItem(itemId);
   }
 
   /**

@@ -15,7 +15,7 @@ const { validateEnvironment } = require('./middlewares/validation');
 const routes = require('./routes');
 
 // Importar serviços
-const { testMondayConnection } = require('./services/mondayService');
+const MondayService = require('./services/mondayService');
 
 /**
  * Classe principal da aplicação Monday API Automation
@@ -162,7 +162,8 @@ class App {
 
       // Validar conexão com o Monday.com na inicialização
       if (process.env.NODE_ENV !== 'test') {
-        await testMondayConnection();
+        const mondayService = new MondayService();
+        await mondayService.testConnection();
         console.log('✅ Conexão com o Monday.com validada com sucesso.');
       }
       

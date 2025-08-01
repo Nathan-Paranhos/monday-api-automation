@@ -201,6 +201,68 @@ router.post('/:id/cancel',
 
 /**
  * @swagger
+ * /api/automation/process-item:
+ *   post:
+ *     summary: Processa um item específico do Monday.com
+ *     description: Endpoint para processamento automático de itens via MonitorBot
+ *     tags: [Automation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - itemId
+ *             properties:
+ *               itemId:
+ *                 type: string
+ *                 description: ID do item no Monday.com
+ *               itemName:
+ *                 type: string
+ *                 description: Nome do item
+ *               source:
+ *                 type: string
+ *                 description: Origem da solicitação (monitor-bot, manual, webhook)
+ *               timestamp:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Timestamp da solicitação
+ *     responses:
+ *       200:
+ *         description: Item processado com sucesso
+ *       400:
+ *         description: Dados inválidos
+ *       500:
+ *         description: Erro interno do servidor
+ */
+router.post('/process-item', 
+  asyncErrorHandler(async (req, res) => {
+    const result = await automationController.processItem(req, res);
+    return result;
+  })
+);
+
+/**
+ * @swagger
+ * /api/automation/monitor-status:
+ *   get:
+ *     summary: Status do sistema de monitoramento
+ *     description: Retorna informações sobre o MonitorBot e estatísticas
+ *     tags: [Automation]
+ *     responses:
+ *       200:
+ *         description: Status do sistema de monitoramento
+ */
+router.get('/monitor-status', 
+  asyncErrorHandler(async (req, res) => {
+    const result = await automationController.getMonitorStatus(req, res);
+    return result;
+  })
+);
+
+/**
+ * @swagger
  * /api/automation/stats:
  *   get:
  *     summary: Obtém estatísticas das automações

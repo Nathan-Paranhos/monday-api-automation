@@ -2,16 +2,17 @@
   "name": "monday-api-automation",
   "version": "1.0.0",
   "description": "API para automatizar criação de estrutura de pastas baseada em demandas do Monday.com",
-  "main": "index.js",
+  "main": "server.js",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "start": "node index.js",
-    "start:prod": "NODE_ENV=production node index.js",
-    "dev": "nodemon index.js",
-    "dev:debug": "nodemon --inspect index.js",
+    "start": "node server.js",
+    "start:prod": "NODE_ENV=production node server.js",
+    "start:legacy": "node index.js",
+    "dev": "nodemon server.js",
+    "dev:debug": "nodemon --inspect server.js",
     "test": "jest",
     "test:unit": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",

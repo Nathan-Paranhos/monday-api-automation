@@ -183,6 +183,127 @@ class AutomationController {
   });
 
   /**
+   * Processa um item específico do Monday.com
+   * POST /api/automation/process-item
+   */
+  processItem = asyncErrorHandler(async (req, res) => {
+    const startTime = Date.now();
+    const { itemId, itemName, source = 'api', timestamp } = req.body;
+    const requestId = req.requestId;
+
+    // Validar dados de entrada
+    if (!itemId) {
+      return formatError(res, 'itemId é obrigatório', 400, 'INVALID_INPUT');
+    }
+
+    logger.info('Processando item específico', {
+      requestId,
+      itemId,
+      itemName,
+      source,
+      timestamp
+    });
+
+    try {
+      // Processar o item usando o serviço de automação
+      const result = await this.automationService.processSpecificItem({
+        itemId,
+        itemName,
+        source,
+        timestamp
+      });
+
+      const processTime = Date.now() - startTime;
+
+      logger.info('Item processado com sucesso', {
+        requestId,
+        itemId,
+        processTime: `${processTime}ms`,
+        result
+      });
+
+      formatSuccess(res, {
+        itemId,
+        itemName,
+        processedAt: new Date().toISOString(),
+        processTime,
+        result
+      }, 'Item processado com sucesso');
+
+    } catch (error) {
+      const processTime = Date.now() - startTime;
+      
+      logger.error('Erro ao processar item', {
+        requestId,
+        itemId,
+        processTime: `${processTime}ms`,
+        error: error.message,
+        stack: error.stack
+      });
+
+      if (error instanceof AppError) {
+        return formatError(res, error.message, error.statusCode, error.errorCode);
+      }
+      formatError(res, 'Erro interno ao processar item', 500, 'ITEM_PROCESSING_ERROR');
+    }
+  });
+
+  /**
+   * Obtém status do sistema de monitoramento
+   * GET /api/automation/monitor-status
+   */
+  getMonitorStatus = asyncErrorHandler(async (req, res) => {
+    const requestId = req.requestId;
+
+    logger.info('Consultando status do monitoramento', { requestId });
+
+    try {
+      // Obter estatísticas do MonitorBot se disponível
+      const monitorService = req.app.locals.monitorService;
+      
+      let monitorStats = {
+        isRunning: false,
+        message: 'MonitorBot não inicializado'
+      };
+
+      if (monitorService) {
+        monitorStats = monitorService.getStats();
+      }
+
+      const systemStatus = {
+        sistema: 'Monday API Automation',
+        versao: '2.0.0',
+        status: 'online',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        ambiente: process.env.NODE_ENV,
+        monitorBot: monitorStats,
+        memoria: {
+          usado: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+          unidade: 'MB'
+        },
+        api: {
+          monday: {
+            conectado: true,
+            ultimaVerificacao: new Date().toISOString()
+          }
+        }
+      };
+
+      formatSuccess(res, systemStatus, 'Status do monitoramento obtido com sucesso');
+
+    } catch (error) {
+      logger.error('Erro ao obter status do monitoramento', {
+        requestId,
+        error: error.message
+      });
+
+      formatError(res, 'Erro ao obter status do monitoramento', 500, 'MONITOR_STATUS_ERROR');
+    }
+  });
+
+  /**
    * Obtém informações do cliente
    * GET /api/v1/automation/cliente/:id
    */
