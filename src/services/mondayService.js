@@ -11,7 +11,7 @@ class MondayService {
   constructor() {
     this.client = new GraphQLClient('https://api.monday.com/v2', {
       headers: {
-        'Authorization': process.env.MONDAY_API_TOKEN,
+        'Authorization': `Bearer ${process.env.MONDAY_API_TOKEN}`,
         'API-Version': '2023-10'
       }
     });

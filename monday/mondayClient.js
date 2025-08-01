@@ -17,7 +17,7 @@ class MondayClient {
 
     this.client = new GraphQLClient(config.monday.apiUrl, {
       headers: {
-        'Authorization': config.monday.apiToken,
+        'Authorization': `Bearer ${config.monday.apiToken}`,
         'API-Version': '2023-10' // Usar uma versão de API estável
       }
     });
