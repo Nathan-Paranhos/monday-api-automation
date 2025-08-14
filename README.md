@@ -297,22 +297,13 @@ responsaveis: {
   "status_validos": ["na fila", "em andamento", "concluido"],
   "responsaveis": {
     "BOT": [
-      "Nathan.silva@fagrontech.com.br",
-      "Pedro.Ribeiro@fagrontech.com.br",
-      "Bruno.Vaz@fagrontech.com.br",
-      "Jean.Vencigueri@fagrontech.com.br"
+     "responsavel"
     ],
     "Fórmula Certa": [
-      "Nathan.silva@fagrontech.com.br",
-      "Pedro.Ribeiro@fagrontech.com.br",
-      "Bruno.Vaz@fagrontech.com.br",
-      "Jean.Vencigueri@fagrontech.com.br"
+     "responsavel"
     ],
     "Phusion": [
-      "Nathan.silva@fagrontech.com.br",
-      "Pedro.Ribeiro@fagrontech.com.br",
-      "Bruno.Vaz@fagrontech.com.br",
-      "Jean.Vencigueri@fagrontech.com.br"
+     "responsavel"
     ]
   },
   "caminhos_produtos": {
@@ -527,9 +518,8 @@ Para suporte técnico:
 - Valide as configurações com `/config`
 
 **Equipe de desenvolvimento:**
-- **Nathan Silva**: Nathan.silva@fagrontech.com.br
-- **Jean Vencigueri**: Jean.Vencigueri@fagrontech.com.br
-
+- **Nathan Silva**
+- **Jean Vencigueri**
 ## 📝 Licença
 
 ISC License - Fagron Tech
